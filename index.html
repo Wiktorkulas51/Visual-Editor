@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Antigravity Visual Editor</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body class="min-h-[400px] w-[350px] overflow-hidden">
+    <!-- Main Extension UI Layer -->
+    <main id="app" class="h-full w-full">
+      <section class="glass flex h-full flex-col p-6 space-y-6">
+        
+        <!-- Header -->
+        <header class="flex items-center justify-between">
+          <div class="flex items-center space-y-1 flex-col">
+             <h1 class="text-xl font-bold bg-gradient-to-tr from-brand to-accent bg-clip-text text-transparent">Antigravity</h1>
+             <p class="text-[10px] text-text-dim tracking-widest uppercase">Visual Preview Engine</p>
+          </div>
+          <div class="h-2 w-2 rounded-full bg-brand animate-pulse shadow-premium"></div>
+        </header>
+
+        <!-- Status & Actions -->
+        <div class="flex-grow space-y-4">
+          <div class="rounded-xl bg-white/5 p-4 border border-white/5 space-y-2">
+            <p class="text-xs text-text-dim">Active Context</p>
+            <p id="page-status" class="text-sm font-medium">Ready to Edit</p>
+          </div>
+        </div>
+
+        <!-- Start Button -->
+        <button id="launch-editor" class="group relative overflow-hidden bg-brand px-6 py-3 rounded-button font-semibold text-white shadow-premium transition-all hover:scale-[1.02] active:scale-[0.98]">
+          <span class="relative z-10">Działaj Wizualnie</span>
+          <div class="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+        </button>
+
+      </section>
+    </main>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
