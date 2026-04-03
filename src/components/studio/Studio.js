@@ -23,10 +23,6 @@ export function createStudio(shadowRoot, handlers, options = {}) {
 }
 
 export function updateViewportStatus(container, width) {
-  const statusEl = container.querySelector('#viewport-status');
-  if (!statusEl) {
-    return;
-  }
-
-  statusEl.textContent = `${width < 768 ? 'Mobile' : 'Desktop'} ${width}px`;
+  void container;
+  void width;
 }

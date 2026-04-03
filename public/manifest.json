@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Antigravity Visual Editor",
+  "name": "Visual Editor",
   "version": "1.0.0",
   "description": "Figma-like visual editor for live CSS editing in the browser.",
   "permissions": ["activeTab", "scripting", "storage", "sidePanel", "tabs"],

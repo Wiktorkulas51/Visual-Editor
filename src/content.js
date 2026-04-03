@@ -1,11 +1,19 @@
-import { ACTIONS, DEFAULT_PANEL_WIDTH } from './utils/protocol';
-import { buildPanelState } from './utils/panel-state';
 import { createInspectorManager } from './utils/inspector';
+
+const ACTIONS = {
+  PANEL_STATE_CHANGED: 'ANTIGRAVITY_PANEL_STATE_CHANGED',
+  PANEL_WIDTH_CHANGED: 'ANTIGRAVITY_PANEL_WIDTH_CHANGED',
+  INSPECT_MODE_CHANGED: 'ANTIGRAVITY_INSPECT_MODE_CHANGED',
+  SELECTION_CHANGED: 'ANTIGRAVITY_SELECTION_CHANGED',
+  SPACING_CHANGED: 'ANTIGRAVITY_SPACING_CHANGED',
+  RESET_SPACING: 'ANTIGRAVITY_RESET_SPACING',
+};
+
+const DEFAULT_PANEL_WIDTH = 360;
 
 const state = {
   panelActive: false,
   inspectMode: false,
-  savedInlineStyles: null,
   inspector: null,
 };
 
@@ -16,7 +24,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   switch (message.action) {
     case ACTIONS.PANEL_STATE_CHANGED:
-      setPanelActive(Boolean(message.active), message.width);
+      applyPanelState({
+        active: Boolean(message.active),
+        inspectMode: typeof message.inspectMode === 'boolean' ? message.inspectMode : state.inspectMode,
+        width: message.width,
+      });
       sendResponse?.({ ok: true });
       break;
     case ACTIONS.PANEL_WIDTH_CHANGED:
@@ -25,6 +37,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       break;
     case ACTIONS.INSPECT_MODE_CHANGED:
       setInspectMode(Boolean(message.enabled));
+      sendResponse?.({ ok: true });
+      break;
+    case ACTIONS.PING:
       sendResponse?.({ ok: true });
       break;
     default:
@@ -44,69 +59,39 @@ function ensureInspector() {
   return state.inspector;
 }
 
-function setPanelActive(active, width = DEFAULT_PANEL_WIDTH) {
+function applyPanelState({ active, inspectMode, width = DEFAULT_PANEL_WIDTH }) {
   state.panelActive = Boolean(active);
+  state.inspectMode = Boolean(inspectMode);
+
   applyPanelShift(width);
 
   const inspector = ensureInspector();
   inspector.setActive(state.panelActive && state.inspectMode);
 
-  if (!state.panelActive) {
+  if (!state.panelActive || !state.inspectMode) {
     inspector.reset();
-    restoreInlineStyles();
-    publishSelection(null);
-  } else {
     clearHostSelectionStyles();
+    return;
   }
+
+  clearHostSelectionStyles();
 }
 
 function applyPanelShift(width = DEFAULT_PANEL_WIDTH) {
-  const panelState = buildPanelState({ active: state.panelActive, width });
-  ensureInlineStyleSnapshot();
-
-  document.documentElement.dataset.antigravitySidepanel = panelState.active ? 'open' : 'closed';
-  document.body.dataset.antigravitySidepanel = panelState.active ? 'open' : 'closed';
-  document.documentElement.style.setProperty('margin-right', panelState.marginRight, 'important');
-  document.body.style.setProperty('margin-right', panelState.marginRight, 'important');
-  document.documentElement.style.setProperty('transition', 'margin-right 180ms ease');
-  document.body.style.setProperty('transition', 'margin-right 180ms ease');
-  document.documentElement.style.setProperty('--antigravity-sidepanel-width', panelState.width);
+  void width;
+  // Desktop-only mode: keep the page viewport untouched.
 }
 
 function ensureInlineStyleSnapshot() {
-  if (state.savedInlineStyles) {
-    return;
-  }
-
-  state.savedInlineStyles = {
-    html: {
-      marginRight: document.documentElement.style.marginRight,
-      transition: document.documentElement.style.transition,
-    },
-    body: {
-      marginRight: document.body.style.marginRight,
-      transition: document.body.style.transition,
-    },
-  };
+  return;
 }
 
 function restoreInlineStyles() {
-  if (!state.savedInlineStyles) {
-    return;
-  }
-
-  document.documentElement.style.marginRight = state.savedInlineStyles.html.marginRight;
-  document.documentElement.style.transition = state.savedInlineStyles.html.transition;
-  document.body.style.marginRight = state.savedInlineStyles.body.marginRight;
-  document.body.style.transition = state.savedInlineStyles.body.transition;
-  document.documentElement.style.removeProperty('--antigravity-sidepanel-width');
-  delete document.documentElement.dataset.antigravitySidepanel;
-  delete document.body.dataset.antigravitySidepanel;
-  state.savedInlineStyles = null;
+  return;
 }
 
 function clearHostSelectionStyles() {
-  document.body.style.removeProperty('outline');
+  document.body?.style.removeProperty('outline');
 }
 
 function publishSelection(selection) {
@@ -119,12 +104,8 @@ function publishSelection(selection) {
 }
 
 function setInspectMode(enabled) {
-  state.inspectMode = Boolean(enabled);
-
-  const inspector = ensureInspector();
-  inspector.setActive(state.panelActive && state.inspectMode);
-
-  if (!state.panelActive) {
-    publishSelection(null);
-  }
+  applyPanelState({
+    active: state.panelActive,
+    inspectMode: Boolean(enabled),
+  });
 }

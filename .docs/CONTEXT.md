@@ -1,4 +1,4 @@
-# Project Context: Antigravity Visual Editor
+# Project Context: Visual Editor
 
 An advanced Chrome Extension acting as a visual editor (Figma-like) directly in the browser, allowing for live CSS manipulation and responsive design synchronization.
 
@@ -42,6 +42,8 @@ An advanced Chrome Extension acting as a visual editor (Figma-like) directly in 
 - [x] Page push logic for active side panel state.
 - [x] Inspector overlay box with cursor tracking and lock-on-click.
 - [x] InspectorToggle atom and SpacingControl molecule extraction.
+- [x] Body-safe inspector overlay attachment and icon-based InspectorToggle UI.
+- [x] Inline-styled overlay boxes in shadow DOM and panel-width status labeling.
 
 ## Key Patterns
 - **Line Endings**: LF

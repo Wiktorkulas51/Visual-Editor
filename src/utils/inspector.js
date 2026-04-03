@@ -1,7 +1,6 @@
 import { readSpacingFromComputedStyle } from './spacing.js';
 
 const INSPECTOR_ROOT_ID = 'antigravity-inspector-root';
-const BOX_BASE_CLASS = 'pointer-events-none absolute rounded-md border';
 const SIDES = ['top', 'right', 'bottom', 'left'];
 
 function ensurePx(value) {
@@ -24,6 +23,22 @@ function setBoxVisible(box, visible) {
   box.style.opacity = visible ? '1' : '0';
 }
 
+export function applyInspectorBoxStyles(box, color) {
+  box.style.position = 'fixed';
+  box.style.pointerEvents = 'none';
+  box.style.boxSizing = 'border-box';
+  box.style.borderStyle = 'solid';
+  box.style.borderWidth = '1px';
+  box.style.borderRadius = '0.75rem';
+  box.style.backgroundColor = 'transparent';
+  box.style.transform = 'translateZ(0)';
+  box.style.willChange = 'left, top, width, height, opacity';
+  box.style.borderColor = color;
+  box.style.boxShadow = `0 0 0 1px ${color}`;
+  box.style.opacity = '0';
+  box.style.transition = 'opacity 120ms ease, transform 120ms ease';
+}
+
 function updateBox(box, rect, color, label) {
   box.style.left = ensurePx(rect.left);
   box.style.top = ensurePx(rect.top);
@@ -36,15 +51,20 @@ function updateBox(box, rect, color, label) {
 
 function createBox(doc, color) {
   const box = doc.createElement('div');
-  box.className = BOX_BASE_CLASS;
-  box.style.borderColor = color;
-  box.style.boxShadow = `0 0 0 1px ${color}`;
-  box.style.opacity = '0';
-  box.style.transition = 'opacity 120ms ease, transform 120ms ease';
+  applyInspectorBoxStyles(box, color);
 
   const label = doc.createElement('div');
   label.dataset.inspectorLabel = 'true';
-  label.className = 'absolute -top-6 left-0 rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-white';
+  label.style.position = 'absolute';
+  label.style.left = '0';
+  label.style.top = '-1.5rem';
+  label.style.borderRadius = '9999px';
+  label.style.padding = '0.25rem 0.5rem';
+  label.style.fontSize = '0.625rem';
+  label.style.fontWeight = '700';
+  label.style.letterSpacing = '0.2em';
+  label.style.textTransform = 'uppercase';
+  label.style.color = '#fff';
   label.style.background = color;
   label.textContent = '';
   box.appendChild(label);
@@ -61,19 +81,23 @@ function createOverlayLayer() {
   const style = document.createElement('style');
   style.textContent = `
     :host { all: initial; }
-    .layer { position: fixed; inset: 0; pointer-events: none; }
+    :host,
+    :host * {
+      pointer-events: none !important;
+    }
   `;
   const hoverBox = createBox(document, 'oklch(0.65 0.24 260 / 85%)');
   const selectionBox = createBox(document, 'oklch(0.70 0.30 330 / 90%)');
 
   shadowRoot.append(style, hoverBox, selectionBox);
-  document.body.appendChild(host);
+  const detachHost = attachHostWhenBodyReady(document, host);
 
   return {
     host,
     hoverBox,
     selectionBox,
     destroy() {
+      detachHost();
       host.remove();
     },
     showHover(rect, label) {
@@ -88,6 +112,28 @@ function createOverlayLayer() {
     hideSelection() {
       setBoxVisible(selectionBox, false);
     },
+  };
+}
+
+export function attachHostWhenBodyReady(doc, host) {
+  if (doc.body) {
+    doc.body.appendChild(host);
+    return () => {};
+  }
+
+  const attachWhenReady = () => {
+    if (!doc.body) {
+      return;
+    }
+
+    doc.body.appendChild(host);
+    doc.removeEventListener('DOMContentLoaded', attachWhenReady);
+  };
+
+  doc.addEventListener('DOMContentLoaded', attachWhenReady, { once: true });
+
+  return () => {
+    doc.removeEventListener('DOMContentLoaded', attachWhenReady);
   };
 }
 

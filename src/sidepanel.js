@@ -1,12 +1,13 @@
 import './style.css';
 import { createStudio, updateViewportStatus } from './components/studio/Studio';
 import { ACTIONS, DEFAULT_PANEL_WIDTH } from './utils/protocol';
+import { ensureContentScript, sendTabMessage } from './utils/content-script.js';
 
 const state = {
   studio: null,
   shadowRoot: null,
   activeTabId: null,
-  inspectMode: true,
+  inspectMode: false,
 };
 
 async function boot() {
@@ -30,8 +31,9 @@ async function boot() {
   chrome.tabs.onActivated.addListener(() => syncActiveTab(false));
   window.addEventListener('resize', handleResize);
   window.addEventListener('pagehide', handlePanelClose);
+  document.addEventListener('visibilitychange', handleVisibilityChange);
 
-  state.studio.setInspecting(true);
+  state.studio.setInspecting(false);
   state.studio.setSelection(null);
   updateViewportStatus(state.shadowRoot, window.innerWidth);
 
@@ -44,7 +46,7 @@ async function syncActiveTab() {
   state.activeTabId = tab?.id ?? null;
 
   if (previousTabId && previousTabId !== state.activeTabId) {
-    chrome.tabs.sendMessage(previousTabId, {
+    sendTabMessage(previousTabId, {
       action: ACTIONS.PANEL_STATE_CHANGED,
       active: false,
       width: DEFAULT_PANEL_WIDTH,
@@ -55,57 +57,77 @@ async function syncActiveTab() {
     return;
   }
 
+  await ensureContentScript(state.activeTabId);
   state.studio?.setSelection(null);
-  sendPanelState();
-  sendInspectMode(state.inspectMode);
+  await sendPanelState(true, state.inspectMode);
 }
 
-function sendPanelState() {
+async function sendPanelState(active, inspectMode = state.inspectMode) {
   if (!state.activeTabId) {
     return;
   }
 
-  chrome.tabs.sendMessage(state.activeTabId, {
+  await ensureContentScript(state.activeTabId);
+  await sendTabMessage(state.activeTabId, {
     action: ACTIONS.PANEL_STATE_CHANGED,
-    active: true,
+    active,
+    inspectMode,
     width: window.innerWidth,
   });
 }
 
-function sendInspectMode(enabled) {
+async function sendInspectMode(enabled) {
   if (!state.activeTabId) {
     return;
   }
 
-  chrome.tabs.sendMessage(state.activeTabId, {
-    action: ACTIONS.INSPECT_MODE_CHANGED,
-    enabled,
-  });
+  await sendPanelState(true, enabled);
 }
 
-function sendSpacingUpdate(action, payload = {}) {
+async function sendSpacingUpdate(action, payload = {}) {
   if (!state.activeTabId) {
     return;
   }
 
-  chrome.tabs.sendMessage(state.activeTabId, {
+  await ensureContentScript(state.activeTabId);
+  sendTabMessage(state.activeTabId, {
     action,
     ...payload,
   });
 }
 
-function toggleInspectMode() {
+async function toggleInspectMode() {
   state.inspectMode = !state.inspectMode;
   state.studio?.setInspecting(state.inspectMode);
-  sendInspectMode(state.inspectMode);
+  await sendPanelState(true, state.inspectMode);
 }
 
-function handleSpacingChange(property, side, value) {
-  sendSpacingUpdate(ACTIONS.SPACING_CHANGED, { property, side, value });
+async function handleSpacingChange(property, side, value) {
+  await sendSpacingUpdate(ACTIONS.SPACING_CHANGED, { property, side, value });
 }
 
-function handleResetSpacing() {
-  sendSpacingUpdate(ACTIONS.RESET_SPACING);
+async function handleResetSpacing() {
+  await sendSpacingUpdate(ACTIONS.RESET_SPACING);
+}
+
+function handleVisibilityChange() {
+  if (document.hidden) {
+    handlePanelClose();
+    return;
+  }
+
+  handlePanelVisible();
+}
+
+async function handlePanelVisible() {
+  state.studio?.setInspecting(state.inspectMode);
+
+  if (!state.activeTabId) {
+    return;
+  }
+
+  await ensureContentScript(state.activeTabId);
+  await sendPanelState(true, state.inspectMode);
 }
 
 function handleRuntimeMessage(message, sender) {
@@ -127,15 +149,14 @@ function handleResize() {
 }
 
 function handlePanelClose() {
+  state.inspectMode = false;
+  state.studio?.setInspecting(false);
+
   if (!state.activeTabId) {
     return;
   }
 
-  chrome.tabs.sendMessage(state.activeTabId, {
-    action: ACTIONS.PANEL_STATE_CHANGED,
-    active: false,
-    width: DEFAULT_PANEL_WIDTH,
-  });
+  sendPanelState(false, false);
 }
 
 boot();

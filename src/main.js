@@ -1,4 +1,5 @@
 import './style.css';
+import { ensureContentScript, sendTabMessage } from './utils/content-script.js';
 
 const statusEl = document.querySelector('#page-status');
 const launchButton = document.querySelector('#launch-editor');
@@ -13,14 +14,13 @@ launchButton?.addEventListener('click', async () => {
 
   setStatus('Launching inspector...');
 
-  chrome.tabs.sendMessage(tab.id, { action: 'INIT_STUDIO' }, () => {
-    if (chrome.runtime.lastError) {
-      setStatus('Inspector is unavailable on this page.', true);
-      return;
-    }
-
+  if (await ensureContentScript(tab.id)) {
+    await sendTabMessage(tab.id, { action: 'INIT_STUDIO' });
     setStatus('Inspector ready.');
-  });
+    return;
+  }
+
+  setStatus('Inspector is unavailable on this page.', true);
 });
 
 function setStatus(message, isError = false) {

@@ -22,16 +22,9 @@ export function createInspectorPanel({
     </div>
   `;
 
+  const inspectToggle = createInspectorToggle({ active: false, onClick: onInspectToggle });
   const headerActions = document.createElement('div');
   headerActions.className = 'flex flex-col items-end gap-2';
-
-  const viewportStatus = document.createElement('span');
-  viewportStatus.id = 'viewport-status';
-  viewportStatus.className = 'rounded-full border border-brand/20 bg-brand/10 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-brand';
-  viewportStatus.textContent = 'Desktop 0px';
-
-  const inspectToggle = createInspectorToggle({ active: false, onClick: onInspectToggle });
-  headerActions.appendChild(viewportStatus);
   headerActions.appendChild(inspectToggle.element);
   header.appendChild(headerActions);
   panel.appendChild(header);
@@ -119,9 +112,7 @@ export function createInspectorPanel({
     },
     setInspecting(isInspecting) {
       const statusEl = panel.querySelector('#inspector-status');
-      const badge = panel.querySelector('#selection-badge');
       statusEl.textContent = isInspecting ? 'Inspecting' : 'Paused';
-      badge.textContent = isInspecting ? (badge.textContent === 'Idle' ? 'Active' : badge.textContent) : 'Paused';
       inspectToggle.setActive(isInspecting);
     },
   };
