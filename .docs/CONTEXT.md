@@ -33,8 +33,10 @@ An advanced Chrome Extension acting as a visual editor (Figma-like) directly in 
 - [ ] Tailwind CSS configuration (Awaiting version choice: v3 or v4).
 - [x] Manifest.json setup.
 - [x] Directory structure preparation (Atomic Design).
-- [ ] Shadow DOM UI entry point implementation.
-- [ ] Live CSS injection logic.
+- [x] Shadow DOM UI entry point implementation.
+- [x] Inspector overlay with element picking.
+- [x] Live spacing editing for margin and padding.
+- [x] Core spacing utilities covered by tests.
 
 ## Key Patterns
 - **Line Endings**: LF
