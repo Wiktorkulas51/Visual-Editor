@@ -9,11 +9,21 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: 'index.html',
+        sidepanel: 'sidepanel.html',
         content: 'src/content.js',
+        background: 'src/background.js',
       },
       output: {
         entryFileNames: (assetInfo) => {
-          return assetInfo.name === 'content' ? 'src/content.js' : 'assets/[name]-[hash].js'
+          if (assetInfo.name === 'content') {
+            return 'src/content.js'
+          }
+
+          if (assetInfo.name === 'background') {
+            return 'src/background.js'
+          }
+
+          return 'assets/[name]-[hash].js'
         },
       },
     },

@@ -1,12 +1,15 @@
 import studioStyles from '../../style.css?inline';
 import { createInspectorPanel } from '../ui/organisms/Inspector';
 
-export function createStudio(shadowRoot, handlers) {
+export function createStudio(shadowRoot, handlers, options = {}) {
   const styleSheet = new CSSStyleSheet();
   styleSheet.replaceSync(studioStyles);
   shadowRoot.adoptedStyleSheets = [styleSheet];
 
-  const panel = createInspectorPanel(handlers);
+  const panel = createInspectorPanel({
+    ...handlers,
+    mode: options.mode ?? 'sidepanel',
+  });
   shadowRoot.appendChild(panel.element);
 
   return {

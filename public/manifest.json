@@ -3,10 +3,14 @@
   "name": "Antigravity Visual Editor",
   "version": "1.0.0",
   "description": "Figma-like visual editor for live CSS editing in the browser.",
-  "permissions": ["activeTab", "scripting", "storage"],
-  "action": {
-    "default_popup": "index.html"
+  "permissions": ["activeTab", "scripting", "storage", "sidePanel", "tabs"],
+  "background": {
+    "service_worker": "src/background.js"
   },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "action": {},
   "content_scripts": [
     {
       "matches": ["<all_urls>"],

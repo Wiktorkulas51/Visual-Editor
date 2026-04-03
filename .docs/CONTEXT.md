@@ -37,6 +37,11 @@ An advanced Chrome Extension acting as a visual editor (Figma-like) directly in 
 - [x] Inspector overlay with element picking.
 - [x] Live spacing editing for margin and padding.
 - [x] Core spacing utilities covered by tests.
+- [x] Side Panel migration foundation.
+- [x] MV3 background service worker and manifest support.
+- [x] Page push logic for active side panel state.
+- [x] Inspector overlay box with cursor tracking and lock-on-click.
+- [x] InspectorToggle atom and SpacingControl molecule extraction.
 
 ## Key Patterns
 - **Line Endings**: LF

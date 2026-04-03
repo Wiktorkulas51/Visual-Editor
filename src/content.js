@@ -1,192 +1,130 @@
-import { createStudio, updateViewportStatus } from './components/studio/Studio';
-import { applySpacingToStyle, normalizeSpacingValue, readSpacingFromComputedStyle } from './utils/spacing';
+import { ACTIONS, DEFAULT_PANEL_WIDTH } from './utils/protocol';
+import { buildPanelState } from './utils/panel-state';
+import { createInspectorManager } from './utils/inspector';
 
 const state = {
-  studio: null,
-  shadowRoot: null,
-  selectedElement: null,
-  inspectMode: true,
-  hoveredElement: null,
-  previousHoverOutline: '',
-  previousSelectionOutline: '',
+  panelActive: false,
+  inspectMode: false,
+  savedInlineStyles: null,
+  inspector: null,
 };
 
-const SIDES = ['top', 'right', 'bottom', 'left'];
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (!message?.action) {
+    return;
+  }
 
-chrome.runtime.onMessage.addListener((request) => {
-  if (request.action === 'INIT_STUDIO') {
-    initVisualEditor();
+  switch (message.action) {
+    case ACTIONS.PANEL_STATE_CHANGED:
+      setPanelActive(Boolean(message.active), message.width);
+      sendResponse?.({ ok: true });
+      break;
+    case ACTIONS.PANEL_WIDTH_CHANGED:
+      applyPanelShift(message.width);
+      sendResponse?.({ ok: true });
+      break;
+    case ACTIONS.INSPECT_MODE_CHANGED:
+      setInspectMode(Boolean(message.enabled));
+      sendResponse?.({ ok: true });
+      break;
+    default:
+      break;
   }
 });
 
-function initVisualEditor() {
-  if (state.studio) {
-    return;
+function ensureInspector() {
+  if (state.inspector) {
+    return state.inspector;
   }
 
-  const container = document.createElement('div');
-  container.id = 'antigravity-editor-root';
-  document.body.appendChild(container);
-
-  state.shadowRoot = container.attachShadow({ mode: 'open' });
-  state.studio = createStudio(state.shadowRoot, {
-    onInspectToggle: toggleInspectMode,
-    onSpacingChange: handleSpacingChange,
-    onResetSpacing: resetSpacing,
+  state.inspector = createInspectorManager({
+    onSelectionChange: publishSelection,
   });
 
-  attachInspectorListeners();
-  state.studio.setInspecting(true);
-  updateSelection(null);
-  handleResize();
+  return state.inspector;
 }
 
-function attachInspectorListeners() {
-  document.addEventListener('pointermove', handlePointerMove, true);
-  document.addEventListener('click', handleClick, true);
-  window.addEventListener('resize', handleResize);
-}
+function setPanelActive(active, width = DEFAULT_PANEL_WIDTH) {
+  state.panelActive = Boolean(active);
+  applyPanelShift(width);
 
-function handleResize() {
-  if (state.studio && state.shadowRoot) {
-    updateViewportStatus(state.shadowRoot, window.innerWidth);
+  const inspector = ensureInspector();
+  inspector.setActive(state.panelActive && state.inspectMode);
+
+  if (!state.panelActive) {
+    inspector.reset();
+    restoreInlineStyles();
+    publishSelection(null);
+  } else {
+    clearHostSelectionStyles();
   }
 }
 
-function toggleInspectMode() {
-  state.inspectMode = !state.inspectMode;
-  if (!state.inspectMode) {
-    clearHoverOutline();
-  }
+function applyPanelShift(width = DEFAULT_PANEL_WIDTH) {
+  const panelState = buildPanelState({ active: state.panelActive, width });
+  ensureInlineStyleSnapshot();
 
-  state.studio?.setInspecting(state.inspectMode);
+  document.documentElement.dataset.antigravitySidepanel = panelState.active ? 'open' : 'closed';
+  document.body.dataset.antigravitySidepanel = panelState.active ? 'open' : 'closed';
+  document.documentElement.style.setProperty('margin-right', panelState.marginRight, 'important');
+  document.body.style.setProperty('margin-right', panelState.marginRight, 'important');
+  document.documentElement.style.setProperty('transition', 'margin-right 180ms ease');
+  document.body.style.setProperty('transition', 'margin-right 180ms ease');
+  document.documentElement.style.setProperty('--antigravity-sidepanel-width', panelState.width);
 }
 
-function handlePointerMove(event) {
-  if (!state.inspectMode) {
+function ensureInlineStyleSnapshot() {
+  if (state.savedInlineStyles) {
     return;
   }
 
-  const target = getInspectableElement(event.target);
-  if (!target || target === state.selectedElement) {
-    return;
-  }
-
-  setHoverOutline(target);
-}
-
-function handleClick(event) {
-  if (!state.inspectMode) {
-    return;
-  }
-
-  const target = getInspectableElement(event.target);
-  if (!target) {
-    return;
-  }
-
-  event.preventDefault();
-  event.stopPropagation();
-  selectElement(target);
-}
-
-function getInspectableElement(node) {
-  if (!(node instanceof Element)) {
-    return null;
-  }
-
-  if (node.closest('#antigravity-editor-root')) {
-    return null;
-  }
-
-  return node;
-}
-
-function setHoverOutline(element) {
-  if (state.hoveredElement === element) {
-    return;
-  }
-
-  clearHoverOutline();
-  state.hoveredElement = element;
-  state.previousHoverOutline = element.style.outline;
-  element.style.outline = '2px dashed oklch(0.65 0.24 260 / 85%)';
-}
-
-function clearHoverOutline() {
-  if (!state.hoveredElement || state.hoveredElement === state.selectedElement) {
-    state.hoveredElement = null;
-    return;
-  }
-
-  state.hoveredElement.style.outline = state.previousHoverOutline;
-  state.hoveredElement = null;
-  state.previousHoverOutline = '';
-}
-
-function selectElement(element) {
-  if (state.selectedElement && state.selectedElement !== element) {
-    state.selectedElement.style.outline = state.previousSelectionOutline;
-  }
-
-  clearHoverOutline();
-  state.selectedElement = element;
-  state.previousSelectionOutline = element.style.outline;
-  element.style.outline = '2px solid oklch(0.70 0.30 330 / 90%)';
-  state.studio?.setSelection(buildSelectionSnapshot(element));
-}
-
-function updateSelection(selection) {
-  state.studio?.setSelection(selection);
-}
-
-function buildSelectionSnapshot(element) {
-  const rect = element.getBoundingClientRect();
-  const computedStyle = window.getComputedStyle(element);
-  const margin = readSpacingFromComputedStyle(computedStyle, 'margin');
-  const padding = readSpacingFromComputedStyle(computedStyle, 'padding');
-  const className = element.className && typeof element.className === 'string' ? `.${element.className.trim().split(/\s+/).filter(Boolean).slice(0, 2).join('.')}` : '';
-
-  return {
-    label: `${element.tagName.toLowerCase()}${element.id ? `#${element.id}` : ''}${className}`,
-    tagName: element.tagName.toLowerCase(),
-    width: `${Math.round(rect.width)}px`,
-    height: `${Math.round(rect.height)}px`,
-    spacing: { margin, padding },
-    spacingSummary: {
-      margin: SIDES.map((side) => margin[side]).join(' '),
-      padding: SIDES.map((side) => padding[side]).join(' '),
+  state.savedInlineStyles = {
+    html: {
+      marginRight: document.documentElement.style.marginRight,
+      transition: document.documentElement.style.transition,
+    },
+    body: {
+      marginRight: document.body.style.marginRight,
+      transition: document.body.style.transition,
     },
   };
 }
 
-function handleSpacingChange(property, side, value) {
-  if (!state.selectedElement) {
+function restoreInlineStyles() {
+  if (!state.savedInlineStyles) {
     return;
   }
 
-  state.selectedElement.style[`${property}${side.charAt(0).toUpperCase()}${side.slice(1)}`] = normalizeSpacingValue(value) || '0px';
-  state.studio?.setSelection(buildSelectionSnapshot(state.selectedElement));
+  document.documentElement.style.marginRight = state.savedInlineStyles.html.marginRight;
+  document.documentElement.style.transition = state.savedInlineStyles.html.transition;
+  document.body.style.marginRight = state.savedInlineStyles.body.marginRight;
+  document.body.style.transition = state.savedInlineStyles.body.transition;
+  document.documentElement.style.removeProperty('--antigravity-sidepanel-width');
+  delete document.documentElement.dataset.antigravitySidepanel;
+  delete document.body.dataset.antigravitySidepanel;
+  state.savedInlineStyles = null;
 }
 
-function resetSpacing() {
-  if (!state.selectedElement) {
-    return;
+function clearHostSelectionStyles() {
+  document.body.style.removeProperty('outline');
+}
+
+function publishSelection(selection) {
+  chrome.runtime.sendMessage({
+    action: ACTIONS.SELECTION_CHANGED,
+    selection,
+    active: state.panelActive,
+    inspecting: state.panelActive && state.inspectMode,
+  });
+}
+
+function setInspectMode(enabled) {
+  state.inspectMode = Boolean(enabled);
+
+  const inspector = ensureInspector();
+  inspector.setActive(state.panelActive && state.inspectMode);
+
+  if (!state.panelActive) {
+    publishSelection(null);
   }
-
-  applySpacingToStyle(state.selectedElement.style, 'margin', {
-    top: '0px',
-    right: '0px',
-    bottom: '0px',
-    left: '0px',
-  });
-
-  applySpacingToStyle(state.selectedElement.style, 'padding', {
-    top: '0px',
-    right: '0px',
-    bottom: '0px',
-    left: '0px',
-  });
-
-  state.studio?.setSelection(buildSelectionSnapshot(state.selectedElement));
 }
