@@ -3,12 +3,12 @@ import { Icons } from '../atoms/Icons.js';
 
 export function createElementActions({ onAction }) {
   const container = document.createElement('div');
-  container.className = 'flex flex-col gap-3 py-3 border-b border-white/5';
+  container.className = 'flex flex-col gap-4 p-3 border-b border-white/5';
   
   container.appendChild(createLabel('Element Management'));
   
   const actionsGrid = document.createElement('div');
-  actionsGrid.className = 'grid grid-cols-4 gap-2';
+  actionsGrid.className = 'grid grid-cols-4 gap-3';
 
   const actions = [
     { id: 'DUPLICATE', icon: Icons.COPY, title: 'Duplicate' },

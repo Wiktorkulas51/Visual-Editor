@@ -15,40 +15,6 @@ const state = {
 
 let lastSelectionId = null;
 
-function updateUI(force = false) {
-  const container = document.getElementById('app');
-  if (!container || !state.selection) return;
-
-  // Only re-render if selection changed or forced
-  const currentId = `${state.selection.tagName}-${state.selection.label}`;
-  if (!force && currentId === lastSelectionId) {
-    return;
-  }
-  lastSelectionId = currentId;
-
-  const studio = createStudio({
-    selection: state.selection,
-    handlers: {
-      onInspectToggle: () => {
-        state.inspectMode = !state.inspectMode;
-        chrome.tabs.sendMessage(state.activeTabId, { action: ACTIONS.INSPECT_MODE_CHANGED, enabled: state.inspectMode });
-      },
-      onSpacingChange: handleSpacingChange,
-      onStyleChange: (prop, val) => {
-        // Update local state to keep it snappy
-        if (state.selection?.styles) state.selection.styles[prop] = val;
-        handleStyleChange(prop, val);
-      },
-      onTagChange: handleTagChange,
-      onResetSpacing: handleResetSpacing,
-    },
-    config: { mode: 'sidepanel' },
-  });
-
-  container.innerHTML = '';
-  container.appendChild(studio);
-}
-
 async function boot() {
   try {
     const host = document.querySelector('#app');
@@ -60,7 +26,17 @@ async function boot() {
     state.studio = createStudio(
       state.shadowRoot,
       {
-        onInspectToggle: () => {},
+        onInspectToggle: () => {
+          state.inspectMode = !state.inspectMode;
+          state.studio.setInspecting(state.inspectMode);
+          if (state.activeTabId) {
+            chrome.tabs.sendMessage(state.activeTabId, { 
+              action: ACTIONS.INSPECT_MODE_CHANGED, 
+              enabled: state.inspectMode 
+            });
+            sendPanelState(true, state.inspectMode);
+          }
+        },
         onSpacingChange: handleSpacingChange,
         onStyleChange: handleStyleChange,
         onTagChange: handleTagChange,
@@ -162,6 +138,14 @@ async function handleStyleChange(property, value) {
 async function handleTagChange(tagName) {
   if (!state.activeTabId) return;
   await sendTabMessage(state.activeTabId, { action: ACTIONS.TAG_CHANGED, tagName }, { frameId: state.activeFrameId }).catch(() => {});
+}
+
+async function handleElementAction(actionType) {
+  if (!state.activeTabId) return;
+  await sendTabMessage(state.activeTabId, { 
+    action: ACTIONS.ELEMENT_ACTION, 
+    actionType 
+  }, { frameId: state.activeFrameId }).catch(() => {});
 }
 
 async function handleResetSpacing() {

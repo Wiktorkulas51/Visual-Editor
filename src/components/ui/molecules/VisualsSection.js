@@ -52,14 +52,14 @@ export function createVisualsSection({ onStyleChange, initialStyles = {}, select
   
   colorGroup.appendChild(createColorPickerWithTokens({
     label: 'Text',
-    value: rgbToHex(initialStyles.color),
+    value: rgbToHex(initialStyles['color']),
     tokens: tokens,
     onChange: (val) => onStyleChange('color', val)
   }));
 
   colorGroup.appendChild(createColorPickerWithTokens({
     label: 'Background',
-    value: rgbToHex(initialStyles.backgroundColor),
+    value: rgbToHex(initialStyles['background-color']),
     tokens: tokens,
     onChange: (val) => onStyleChange('backgroundColor', val)
   }));
@@ -67,7 +67,9 @@ export function createVisualsSection({ onStyleChange, initialStyles = {}, select
   container.appendChild(colorGroup);
 
   // 2. OPACITY
-  const opacityValue = initialStyles.opacity !== undefined ? Math.round(parseFloat(initialStyles.opacity) * 100) : 100;
+  const rawOpacity = initialStyles['opacity'];
+  const opacityValue = rawOpacity !== undefined ? Math.round(parseFloat(rawOpacity) * 100) : 100;
+  
   container.appendChild(createSlider({
     label: 'Opacity',
     min: 0,
@@ -81,9 +83,14 @@ export function createVisualsSection({ onStyleChange, initialStyles = {}, select
   const radiusContainer = document.createElement('div');
   radiusContainer.className = 'flex flex-col gap-2 pt-2';
   radiusContainer.appendChild(createLabel('Corners (Rounded)'));
+  
+  const currentRadius = initialStyles['border-radius'] || '0px';
+  // Standardize radius for matching (e.g., '8px 8px 8px 8px' -> '8px')
+  const baseRadius = currentRadius.split(' ')[0] || '0px';
+
   radiusContainer.appendChild(createSegmentedControl({
     options: RadiiLabels.map(label => ({ label, value: Radii[label.toUpperCase()] || '0px' })),
-    activeValue: initialStyles.borderRadius || Radii.NONE,
+    activeValue: RadiiLabels.map(l => Radii[l.toUpperCase()]).includes(baseRadius) ? baseRadius : '0px',
     onChange: (val) => onStyleChange('borderRadius', val)
   }));
   container.appendChild(radiusContainer);
@@ -95,18 +102,26 @@ export function createVisualsSection({ onStyleChange, initialStyles = {}, select
   const borderStyleRow = document.createElement('div');
   borderStyleRow.className = 'flex flex-col gap-2';
   borderStyleRow.appendChild(createLabel('Border Style'));
+  
+  const borderWidthValue = parseInt(initialStyles['border-width']) || 0;
+
   borderStyleRow.appendChild(createSegmentedControl({
     options: [
       { label: 'None', value: 'none' },
       { label: 'Solid', value: 'solid' },
       { label: 'Dashed', value: 'dashed' }
     ],
-    activeValue: initialStyles.borderStyle || 'none',
-    onChange: (val) => onStyleChange('borderStyle', val)
+    activeValue: initialStyles['border-style'] || 'none',
+    onChange: (val) => {
+      onStyleChange('borderStyle', val);
+      // Auto-set width if 0 to make border visible and persist in computed styles
+      if (val !== 'none' && borderWidthValue === 0) {
+        onStyleChange('borderWidth', '1px');
+      }
+    }
   }));
   borderGroup.appendChild(borderStyleRow);
   
-  const borderWidthValue = parseInt(initialStyles.borderWidth) || 0;
   borderGroup.appendChild(createSlider({
     label: 'Border Width',
     min: 0,
@@ -123,22 +138,27 @@ export function createVisualsSection({ onStyleChange, initialStyles = {}, select
   shadowContainer.className = 'flex flex-col gap-2 pt-2';
   shadowContainer.appendChild(createLabel('Box Shadow'));
   
-  const shadowPresets = {
-    'None': 'none',
-    'Soft': '0 2px 12px rgba(0,0,0,0.08)',
-    'Hard': '0 8px 32px rgba(0,0,0,0.16)',
-    'Floating': '0 24px 64px rgba(0,0,0,0.24)'
-  };
+  const shadowPresets = [
+    { label: 'None', value: 'none', match: 'none' },
+    { label: 'Soft', value: '0 2px 12px rgba(0,0,0,0.08)', match: '2px 12px' },
+    { label: 'Hard', value: '0 8px 32px rgba(0,0,0,0.16)', match: '8px 32px' },
+    { label: 'Floating', value: '0 24px 64px rgba(0,0,0,0.24)', match: '24px 64px' }
+  ];
 
-  // Find current active label by value
-  const currentShadow = initialStyles.boxShadow || 'none';
-  const activeShadowLabel = Object.keys(shadowPresets).find(key => shadowPresets[key] === currentShadow) || 'None';
+  const currentShadow = initialStyles['box-shadow'] || 'none';
+  // Use fuzzy matching for shadows to ignore color format differences
+  const matchingPreset = shadowPresets.find(p => {
+    if (p.value === 'none') return currentShadow === 'none' || currentShadow.includes('rgba(0, 0, 0, 0)');
+    return currentShadow.includes(p.match);
+  }) || shadowPresets[0];
 
   shadowContainer.appendChild(createSegmentedControl({
-    options: Object.keys(shadowPresets).map(key => ({ label: key, value: shadowPresets[key] })),
-    activeValue: shadowPresets[activeShadowLabel],
+    options: shadowPresets.map(p => ({ label: p.label, value: p.value })),
+    activeValue: matchingPreset.value,
     onChange: (val) => onStyleChange('boxShadow', val)
   }));
+  
+  container.appendChild(shadowContainer);
   
   container.appendChild(shadowContainer);
 
