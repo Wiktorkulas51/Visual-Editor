@@ -440,28 +440,43 @@ export function createInspectorManager({ onSelectionChange, onStateChange } = {}
       const rect = getElementRect(newEl);
       layer.showSelection(rect, buildElementLabel(newEl));
     },
-    duplicateElement() {
+    handleElementAction(type) {
       if (!state.selectedElement) return;
-      
       const el = state.selectedElement;
-      const clone = el.cloneNode(true);
-      
-      if (el.parentNode) {
-        el.parentNode.insertBefore(clone, el.nextSibling);
-      }
-      
-      state.selectedElement = clone;
-      syncSelection();
-    },
-    deleteElement() {
-      if (!state.selectedElement) return;
-      
-      const el = state.selectedElement;
-      state.selectedElement = null;
-      syncSelection();
-      
-      if (el.parentNode) {
-        el.remove();
+      const parent = el.parentElement;
+      if (!parent) return;
+
+      switch (type) {
+        case 'DELETE':
+          clearSelection();
+          el.remove();
+          break;
+
+        case 'DUPLICATE': {
+          const clone = el.cloneNode(true);
+          el.insertAdjacentElement('afterend', clone);
+          state.selectedElement = clone;
+          syncSelection();
+          break;
+        }
+
+        case 'MOVE_UP': {
+          const prev = el.previousElementSibling;
+          if (prev) {
+            parent.insertBefore(el, prev);
+            syncSelection();
+          }
+          break;
+        }
+
+        case 'MOVE_DOWN': {
+          const next = el.nextElementSibling;
+          if (next) {
+            parent.insertBefore(next, el);
+            syncSelection();
+          }
+          break;
+        }
       }
     },
     updateStyle(property, value) {

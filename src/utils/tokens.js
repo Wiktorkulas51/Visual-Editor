@@ -48,19 +48,3 @@ export const lookupSpacingToken = (value) => {
   const entry = Object.entries(SpacingTokens).find(([_, val]) => val === value);
   return entry ? entry[0] : null;
 };
-
-export const BorderWidths = {
-  NONE: '0px',
-  THIN: '1px',
-  MEDIUM: '2px',
-  THICK: '4px',
-};
-export const BorderWidthLabels = ['None', 'Thin', 'Medium', 'Thick'];
-
-export const Shadows = {
-  NONE: 'none',
-  SOFT: '0 2px 10px rgba(0,0,0,0.08)',
-  MEDIUM: '0 10px 25px rgba(0,0,0,0.15)',
-  FLOATING: '0 20px 50px rgba(0,0,0,0.25)',
-};
-export const ShadowLabels = ['None', 'Soft', 'Medium', 'Floating'];

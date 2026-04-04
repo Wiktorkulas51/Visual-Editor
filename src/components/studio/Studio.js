@@ -3,6 +3,7 @@ import { createInspectorPanel } from '../ui/organisms/Inspector';
 import { createLayoutSection } from '../ui/molecules/LayoutSection';
 import { createTypographySection } from '../ui/molecules/TypographySection';
 import { createVisualsSection } from '../ui/molecules/VisualsSection';
+import { createElementActions } from '../ui/molecules/ElementActions';
 
 export function createStudio(shadowRoot, handlers, options = {}) {
   const styleSheet = new CSSStyleSheet();
@@ -39,6 +40,13 @@ export function createStudio(shadowRoot, handlers, options = {}) {
       properties.innerHTML = ''; // Clear old sections
       
       if (selection) {
+        const elementActions = createElementActions({
+          onAction: (id) => {
+            if (handlers.onElementAction) handlers.onElementAction(id);
+          }
+        });
+        properties.appendChild(elementActions);
+
         const layoutSection = createLayoutSection({
           initialStyles: selection.styles || {},
           onStyleChange: (prop, value) => {
