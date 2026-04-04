@@ -7,37 +7,45 @@ const state = {
   studio: null,
   shadowRoot: null,
   activeTabId: null,
-  inspectMode: false,
+  activeFrameId: null,
+  previousFrameId: null,
+  inspectMode: true,
 };
 
 async function boot() {
-  const host = document.querySelector('#app');
-  if (!host) {
-    return;
+  try {
+    const host = document.querySelector('#app');
+    if (!host) {
+      return;
+    }
+
+    state.shadowRoot = host.attachShadow({ mode: 'open' });
+    state.studio = createStudio(
+      state.shadowRoot,
+      {
+        onInspectToggle: () => {},
+        onSpacingChange: handleSpacingChange,
+        onStyleChange: handleStyleChange,
+        onResetSpacing: handleResetSpacing,
+      },
+      { mode: 'sidepanel' },
+    );
+
+    chrome.runtime.onMessage.addListener(handleRuntimeMessage);
+    chrome.tabs.onActivated.addListener(() => syncActiveTab().catch(console.error));
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('pagehide', handlePanelClose);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    state.studio.setInspecting(true);
+    state.studio.setSelection(null);
+    updateViewportStatus(state.shadowRoot, window.innerWidth);
+
+    // Do not 'await' syncActiveTab here to prevent blocking the UI thread if content-script pings fail
+    syncActiveTab().catch(console.error);
+  } catch (e) {
+    console.error('[SidePanel] Boot failed:', e);
   }
-
-  state.shadowRoot = host.attachShadow({ mode: 'open' });
-  state.studio = createStudio(
-    state.shadowRoot,
-    {
-      onInspectToggle: toggleInspectMode,
-      onSpacingChange: handleSpacingChange,
-      onResetSpacing: handleResetSpacing,
-    },
-    { mode: 'sidepanel' },
-  );
-
-  chrome.runtime.onMessage.addListener(handleRuntimeMessage);
-  chrome.tabs.onActivated.addListener(() => syncActiveTab(false));
-  window.addEventListener('resize', handleResize);
-  window.addEventListener('pagehide', handlePanelClose);
-  document.addEventListener('visibilitychange', handleVisibilityChange);
-
-  state.studio.setInspecting(false);
-  state.studio.setSelection(null);
-  updateViewportStatus(state.shadowRoot, window.innerWidth);
-
-  await syncActiveTab();
 }
 
 async function syncActiveTab() {
@@ -67,6 +75,14 @@ async function sendPanelState(active, inspectMode = state.inspectMode) {
     return;
   }
 
+  // Persistence for all frames to pick up
+  await chrome.storage.local.set({
+    panelActive: active,
+    inspectMode,
+    panelWidth: window.innerWidth,
+    activeTabId: state.activeTabId
+  });
+
   await ensureContentScript(state.activeTabId);
   await sendTabMessage(state.activeTabId, {
     action: ACTIONS.PANEL_STATE_CHANGED,
@@ -88,22 +104,20 @@ async function sendSpacingUpdate(action, payload = {}) {
   if (!state.activeTabId) {
     return;
   }
-
   await ensureContentScript(state.activeTabId);
-  sendTabMessage(state.activeTabId, {
-    action,
-    ...payload,
-  });
-}
-
-async function toggleInspectMode() {
-  state.inspectMode = !state.inspectMode;
-  state.studio?.setInspecting(state.inspectMode);
-  await sendPanelState(true, state.inspectMode);
+  const ok = await sendTabMessage(state.activeTabId, { action, ...payload }, { frameId: state.activeFrameId });
+  if (!ok) {
+    console.error('[SidePanel] Message failed to reach content script.');
+  }
 }
 
 async function handleSpacingChange(property, side, value) {
   await sendSpacingUpdate(ACTIONS.SPACING_CHANGED, { property, side, value });
+}
+
+async function handleStyleChange(property, value) {
+  if (!state.activeTabId) return;
+  await sendTabMessage(state.activeTabId, { action: ACTIONS.STYLE_CHANGED, property, value }, { frameId: state.activeFrameId }).catch(() => {});
 }
 
 async function handleResetSpacing() {
@@ -120,14 +134,14 @@ function handleVisibilityChange() {
 }
 
 async function handlePanelVisible() {
-  state.studio?.setInspecting(state.inspectMode);
+  state.studio?.setInspecting(true);
 
   if (!state.activeTabId) {
     return;
   }
 
   await ensureContentScript(state.activeTabId);
-  await sendPanelState(true, state.inspectMode);
+  await sendPanelState(true, true);
 }
 
 function handleRuntimeMessage(message, sender) {
@@ -139,13 +153,25 @@ function handleRuntimeMessage(message, sender) {
     state.activeTabId = sender.tab.id;
   }
 
+  if (typeof sender.frameId === 'number') {
+    if (typeof state.activeFrameId === 'number' && state.activeFrameId !== sender.frameId) {
+      sendTabMessage(state.activeTabId, {
+        action: ACTIONS.PANEL_STATE_CHANGED,
+        active: false,
+      }, { frameId: state.activeFrameId }).catch(() => {});
+    }
+    
+    state.previousFrameId = state.activeFrameId;
+    state.activeFrameId = sender.frameId;
+  }
+
   state.studio?.setSelection(message.selection);
-  state.studio?.setInspecting(Boolean(message.inspecting));
+  state.studio?.setInspecting(true);
 }
 
 function handleResize() {
   updateViewportStatus(state.shadowRoot, window.innerWidth);
-  sendPanelState();
+  sendPanelState(true);
 }
 
 function handlePanelClose() {

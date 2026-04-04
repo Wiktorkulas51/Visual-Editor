@@ -185,7 +185,7 @@ function isIgnoredTarget(target) {
   return !(target instanceof Element) || target.closest(`#${INSPECTOR_ROOT_ID}`);
 }
 
-function applySpacingSnapshot(element) {
+function applyStyleSnapshot(element) {
   const computedStyle = window.getComputedStyle(element);
   const margin = readSpacingFromComputedStyle(computedStyle, 'margin');
   const padding = readSpacingFromComputedStyle(computedStyle, 'padding');
@@ -195,6 +195,21 @@ function applySpacingSnapshot(element) {
     padding,
     marginSummary: SIDES.map((side) => margin[side]).join(' '),
     paddingSummary: SIDES.map((side) => padding[side]).join(' '),
+    styles: {
+      display: computedStyle.display,
+      flexDirection: computedStyle.flexDirection,
+      justifyContent: computedStyle.justifyContent,
+      alignItems: computedStyle.alignItems,
+      gap: computedStyle.gap,
+      flexWrap: computedStyle.flexWrap,
+      position: computedStyle.position,
+      zIndex: computedStyle.zIndex,
+      fontSize: computedStyle.fontSize,
+      fontWeight: computedStyle.fontWeight,
+      textAlign: computedStyle.textAlign,
+      letterSpacing: computedStyle.letterSpacing,
+      borderRadius: computedStyle.borderRadius,
+    }
   };
 }
 
@@ -221,7 +236,7 @@ export function createInspectorManager({ onSelectionChange, onStateChange } = {}
         className: state.selectedElement.className,
         rect,
       }),
-      spacing: applySpacingSnapshot(state.selectedElement),
+      ...applyStyleSnapshot(state.selectedElement),
     });
   }
 
@@ -296,6 +311,15 @@ export function createInspectorManager({ onSelectionChange, onStateChange } = {}
       onStateChange?.({ active: state.active, locked: state.locked });
     },
     clearSelection,
+    updateStyle(property, value) {
+      if (!state.selectedElement) {
+        console.warn('[Inspector] Cannot update style: no element selected.');
+        return;
+      }
+
+      state.selectedElement.style[property] = value;
+      syncSelection(); // Refresh UI
+    },
     updateSpacing(property, side, value) {
       if (!state.selectedElement) {
         return;

@@ -1,0 +1,28 @@
+export const Icons = {
+  BLOCK: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect></svg>',
+  FLEX: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>',
+  GRID: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line><line x1="9" y1="3" x2="9" y2="21"></line><line x1="15" y1="3" x2="15" y2="21"></line></svg>',
+  ABSOLUTE: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><circle cx="12" cy="12" r="3"/></svg>',
+  FIXED: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 12h16"/></svg>',
+  STICKY: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16M4 10h16M12 4v16"/></svg>',
+  ROW: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14m-7-7 7 7-7 7"/></svg>',
+  COLUMN: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14m-7-7 7 7-7 7"/></svg>',
+  WRAP: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h10c2 0 3 1 3 3s-1 3-3 3H4"/></svg>',
+  DOT: '<svg viewBox="0 0 24 24" width="6" height="6" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg>',
+  // Alignment
+  JUSTIFY_START: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h8M4 12h12M4 18h8"/></svg>',
+  JUSTIFY_CENTER: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h8M4 12h16M8 18h8"/></svg>',
+  JUSTIFY_END: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 6h8M8 12h12M12 18h8"/></svg>',
+  ALIGN_ITEMS_START: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 4v8M12 4v12M18 4v8"/></svg>',
+  ALIGN_ITEMS_CENTER: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8v8M12 4v16M18 8v8"/></svg>',
+  ALIGN_ITEMS_END: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 12v8M12 8v12M18 12v8"/></svg>',
+  ALIGN_ITEMS_STRETCH: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16M4 20h16M8 4v16M16 4v16"/></svg>',
+  JUSTIFY_BETWEEN: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h4M16 6h4M4 12h8M12 12h8M4 18h4M16 18h4"/></svg>',
+  // Typography
+  TEXT_LEFT: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h10M4 18h14"/></svg>',
+  TEXT_CENTER: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M7 12h10M5 18h14"/></svg>',
+  TEXT_RIGHT: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M10 12h10M6 18h10"/></svg>',
+  TEXT_BOLD: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 4v16M6 4h4a4 4 0 0 1 0 8H6M6 12h5a4 4 0 0 1 0 8H6"/></svg>',
+  LETTER_SPACING: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12h16m-4-4 4 4-4 4M8 8l-4 4 4 4"/></svg>',
+  CORNER_RADIUS: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11c0-5.523-4.477-10-10-10H3v8"/></svg>',
+};

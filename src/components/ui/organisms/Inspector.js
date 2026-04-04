@@ -1,10 +1,7 @@
 import { createInspectorToggle } from '../atoms/InspectorToggle';
-import { createSpacingControl } from '../molecules/SpacingControl';
 
 export function createInspectorPanel({
   onInspectToggle,
-  onSpacingChange,
-  onResetSpacing,
   mode = 'sidepanel',
 }) {
   const panel = document.createElement('aside');
@@ -17,7 +14,7 @@ export function createInspectorPanel({
   header.innerHTML = `
     <div class="space-y-1">
       <p class="text-[10px] font-bold uppercase tracking-[0.28em] text-text-dim">Inspector</p>
-      <h2 class="text-lg font-bold tracking-tight">Spacing Controls</h2>
+      <h2 class="text-lg font-bold tracking-tight">Element Details</h2>
       <p id="inspector-target" class="text-[11px] text-text-dim">Click an element to inspect it.</p>
     </div>
   `;
@@ -46,28 +43,15 @@ export function createInspectorPanel({
   `;
   main.appendChild(summary);
 
-  const marginControl = createSpacingControl({
-    title: 'Margin',
-    property: 'margin',
-    onChange: onSpacingChange,
-  });
-  const paddingControl = createSpacingControl({
-    title: 'Padding',
-    property: 'padding',
-    onChange: onSpacingChange,
-  });
-  main.appendChild(marginControl.element);
-  main.appendChild(paddingControl.element);
+  const properties = document.createElement('section');
+  properties.id = 'inspector-properties';
+  properties.className = 'mt-6 divide-y divide-white/5 rounded-2xl border border-white/10 bg-white/5 overflow-hidden';
+  main.appendChild(properties);
+
   panel.appendChild(main);
 
   const footer = document.createElement('footer');
-  footer.className = 'flex items-center justify-between gap-3 border-t border-white/10 p-4';
-
-  const resetButton = document.createElement('button');
-  resetButton.type = 'button';
-  resetButton.className = 'min-h-11 rounded-button border border-white/10 bg-white/5 px-4 py-2 text-xs font-bold text-text-dim transition-all active:scale-[0.98]';
-  resetButton.textContent = 'Reset spacing';
-  resetButton.addEventListener('click', onResetSpacing);
+  footer.className = 'flex items-center justify-end gap-3 border-t border-white/10 p-4';
 
   const status = document.createElement('span');
   status.id = 'inspector-status';
@@ -75,13 +59,7 @@ export function createInspectorPanel({
   status.textContent = 'Inspecting';
 
   footer.appendChild(status);
-  footer.appendChild(resetButton);
   panel.appendChild(footer);
-
-  function setSpacingValues(selection) {
-    marginControl.setValues(selection?.spacing?.margin ?? {});
-    paddingControl.setValues(selection?.spacing?.padding ?? {});
-  }
 
   return {
     element: panel,
@@ -94,21 +72,20 @@ export function createInspectorPanel({
       if (!selection) {
         target.textContent = 'Click an element to inspect it.';
         label.textContent = 'No element selected';
-        meta.innerHTML = '<p>Pick an element on the page to read and edit its spacing.</p>';
         badge.textContent = 'Idle';
-        setSpacingValues(null);
+        meta.classList.remove('grid-cols-2');
+        meta.innerHTML = '<p>Pick an element on the page to inspect its details.</p>';
         return;
       }
 
       target.textContent = selection.label;
       label.textContent = selection.label;
       badge.textContent = selection.tagName;
+      meta.classList.add('grid-cols-2');
       meta.innerHTML = `
         <p><span class="text-text-main">Dimensions:</span> ${selection.width} × ${selection.height}</p>
-        <p><span class="text-text-main">Margin:</span> ${selection.spacing?.marginSummary ?? '0px 0px 0px 0px'}</p>
-        <p><span class="text-text-main">Padding:</span> ${selection.spacing?.paddingSummary ?? '0px 0px 0px 0px'}</p>
+        <p><span class="text-text-main">Tag:</span> ${selection.tagName.toUpperCase()}</p>
       `;
-      setSpacingValues(selection);
     },
     setInspecting(isInspecting) {
       const statusEl = panel.querySelector('#inspector-status');
