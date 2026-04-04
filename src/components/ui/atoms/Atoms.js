@@ -112,3 +112,76 @@ export function createInput({
 
   return { container, input };
 }
+
+export function createColorInput({ label, value = '#000000', onChange }) {
+  const container = document.createElement('div');
+  container.className = 'flex flex-col gap-1';
+
+  if (label) {
+    container.appendChild(createLabel(label));
+  }
+
+  const wrapper = document.createElement('div');
+  wrapper.className = 'flex h-11 w-full items-center gap-2 rounded-md border border-white/10 bg-white/5 px-2 transition-colors focus-within:border-brand';
+
+  const picker = document.createElement('input');
+  picker.type = 'color';
+  picker.value = value;
+  picker.className = 'h-7 w-7 shrink-0 cursor-pointer overflow-hidden rounded-sm border-none bg-transparent p-0 [&::-webkit-color-swatch-wrapper]:p-0 [&::-webkit-color-swatch]:border-none [&::-webkit-color-swatch]:rounded-sm';
+
+  const text = document.createElement('input');
+  text.type = 'text';
+  text.value = value.toUpperCase();
+  text.className = 'w-full bg-transparent text-[11px] font-mono font-bold uppercase tracking-wider text-text-main outline-none placeholder:text-white/20';
+  text.placeholder = '#000000';
+
+  const notify = (val) => {
+    const cleanVal = val.startsWith('#') ? val : `#${val}`;
+    if (/^#[0-9A-F]{6}$/i.test(cleanVal)) {
+      onChange(cleanVal);
+      picker.value = cleanVal;
+      text.value = cleanVal.toUpperCase();
+    }
+  };
+
+  picker.addEventListener('input', (e) => notify(e.target.value));
+  text.addEventListener('change', (e) => notify(e.target.value));
+
+  wrapper.appendChild(picker);
+  wrapper.appendChild(text);
+  container.appendChild(wrapper);
+
+  return container;
+}
+
+export function createSlider({ label, min = 0, max = 100, step = 1, value = 100, unit = '', onChange }) {
+  const container = document.createElement('div');
+  container.className = 'flex flex-col gap-2';
+
+  const header = document.createElement('div');
+  header.className = 'flex items-center justify-between';
+  if (label) header.appendChild(createLabel(label));
+
+  const valDisplay = document.createElement('span');
+  valDisplay.className = 'text-[10px] font-mono font-bold text-brand';
+  valDisplay.textContent = `${value}${unit}`;
+  header.appendChild(valDisplay);
+  
+  container.appendChild(header);
+
+  const slider = document.createElement('input');
+  slider.type = 'range';
+  slider.min = min;
+  slider.max = max;
+  slider.step = step;
+  slider.value = value;
+  slider.className = 'h-1.5 w-full cursor-pointer appearance-none rounded-full bg-white/10 accent-brand focus:outline-none';
+
+  slider.addEventListener('input', (e) => {
+    valDisplay.textContent = `${e.target.value}${unit}`;
+    onChange(Number(e.target.value));
+  });
+
+  container.appendChild(slider);
+  return container;
+}
