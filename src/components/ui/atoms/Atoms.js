@@ -4,10 +4,11 @@ export function createButton({ label, variant = 'primary', onClick, type = 'butt
     primary: 'bg-brand text-white shadow-premium',
     secondary: 'bg-white/5 text-text-dim border border-white/10 hover:bg-white/10',
     ghost: 'bg-transparent text-text-dim hover:text-text-main hover:bg-white/5',
+    danger: 'bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20',
   };
 
   button.type = type;
-  button.className = `min-h-11 rounded-button px-4 py-2 text-xs font-bold transition-all active:scale-[0.98] ${variants[variant]}`;
+  button.className = `min-h-11 rounded-md px-4 py-2 text-xs font-bold transition-all active:scale-[0.98] ${variants[variant]}`;
   button.textContent = label;
 
   if (onClick) {
@@ -80,6 +81,25 @@ export function createLabel(text) {
   label.className = 'text-[10px] font-bold uppercase tracking-[0.2em] text-text-dim mb-1 block';
   label.textContent = text;
   return label;
+}
+
+export function createSectionHeader(title, description = '') {
+  const container = document.createElement('header');
+  container.className = 'mb-2 flex flex-col gap-1';
+  
+  const h = document.createElement('h3');
+  h.className = 'text-[10px] font-bold uppercase tracking-[0.3em] text-brand';
+  h.textContent = title;
+  container.appendChild(h);
+
+  if (description) {
+    const p = document.createElement('p');
+    p.className = 'text-[11px] font-medium text-text-dim';
+    p.textContent = description;
+    container.appendChild(p);
+  }
+
+  return container;
 }
 
 export function createInput({

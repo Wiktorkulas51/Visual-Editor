@@ -1,15 +1,20 @@
 import { createInspectorToggle } from '../atoms/InspectorToggle';
+import { createButton } from '../atoms/Atoms';
 
 export function createInspectorPanel({
   onInspectToggle,
+  onDuplicate,
+  onDelete,
   mode = 'sidepanel',
 }) {
   const panel = document.createElement('aside');
+  // ... existing code ...
   panel.className = mode === 'floating'
     ? 'fixed right-4 top-4 z-[2147483647] flex h-[min(88dvh,44rem)] w-[min(92vw,24rem)] flex-col overflow-hidden rounded-[1.75rem] border border-white/10 bg-surface-glass text-text-main shadow-premium backdrop-blur-xl'
     : 'flex h-full min-h-screen w-full flex-col overflow-hidden border-0 bg-surface-glass text-text-main';
 
   const header = document.createElement('header');
+  // ... rest of the header code ...
   header.className = 'flex items-start justify-between gap-4 border-b border-white/10 p-4 sm:p-5';
   header.innerHTML = `
     <div class="space-y-1">
@@ -51,14 +56,39 @@ export function createInspectorPanel({
   panel.appendChild(main);
 
   const footer = document.createElement('footer');
-  footer.className = 'flex items-center justify-end gap-3 border-t border-white/10 p-4';
+  footer.className = 'flex items-center justify-between gap-3 border-t border-white/10 p-4 bg-white/5';
 
+  const footerLeft = document.createElement('div');
+  footerLeft.className = 'flex items-center gap-2';
+  
   const status = document.createElement('span');
   status.id = 'inspector-status';
   status.className = 'text-[10px] font-bold uppercase tracking-[0.24em] text-text-dim';
-  status.textContent = 'Inspecting';
+  status.textContent = 'Paused';
+  footerLeft.appendChild(status);
+  footer.appendChild(footerLeft);
 
-  footer.appendChild(status);
+  const footerRight = document.createElement('div');
+  footerRight.className = 'flex items-center gap-2 hidden'; // Hidden by default (no selection)
+  footerRight.id = 'inspector-actions';
+
+  const duplicateBtn = createButton({
+    label: 'Duplicate',
+    variant: 'secondary',
+    onClick: onDuplicate
+  });
+  duplicateBtn.className += ' !h-8 !px-3 !text-[11px]';
+  footerRight.appendChild(duplicateBtn);
+
+  const deleteBtn = createButton({
+    label: 'Delete',
+    variant: 'danger',
+    onClick: onDelete
+  });
+  deleteBtn.className += ' !h-8 !px-3 !text-[11px] !bg-red-500/10 !text-red-400 !border-red-500/20 hover:!bg-red-500/20';
+  footerRight.appendChild(deleteBtn);
+
+  footer.appendChild(footerRight);
   panel.appendChild(footer);
 
   return {
@@ -68,6 +98,7 @@ export function createInspectorPanel({
       const label = panel.querySelector('#selection-label');
       const meta = panel.querySelector('#selection-meta');
       const badge = panel.querySelector('#selection-badge');
+      const actions = panel.querySelector('#inspector-actions');
 
       if (!selection) {
         target.textContent = 'Click an element to inspect it.';
@@ -75,6 +106,7 @@ export function createInspectorPanel({
         badge.textContent = 'Idle';
         meta.classList.remove('grid-cols-2');
         meta.innerHTML = '<p>Pick an element on the page to inspect its details.</p>';
+        actions.classList.add('hidden');
         return;
       }
 
@@ -86,6 +118,7 @@ export function createInspectorPanel({
         <p><span class="text-text-main">Dimensions:</span> ${selection.width} × ${selection.height}</p>
         <p><span class="text-text-main">Tag:</span> ${selection.tagName.toUpperCase()}</p>
       `;
+      actions.classList.remove('hidden');
     },
     setInspecting(isInspecting) {
       const statusEl = panel.querySelector('#inspector-status');

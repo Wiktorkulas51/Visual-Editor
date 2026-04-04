@@ -440,6 +440,30 @@ export function createInspectorManager({ onSelectionChange, onStateChange } = {}
       const rect = getElementRect(newEl);
       layer.showSelection(rect, buildElementLabel(newEl));
     },
+    duplicateElement() {
+      if (!state.selectedElement) return;
+      
+      const el = state.selectedElement;
+      const clone = el.cloneNode(true);
+      
+      if (el.parentNode) {
+        el.parentNode.insertBefore(clone, el.nextSibling);
+      }
+      
+      state.selectedElement = clone;
+      syncSelection();
+    },
+    deleteElement() {
+      if (!state.selectedElement) return;
+      
+      const el = state.selectedElement;
+      state.selectedElement = null;
+      syncSelection();
+      
+      if (el.parentNode) {
+        el.remove();
+      }
+    },
     updateStyle(property, value) {
       if (!state.selectedElement) {
         console.warn('[Inspector] Cannot update style: no element selected.');

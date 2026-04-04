@@ -8,6 +8,8 @@ const ACTIONS = {
   SPACING_CHANGED: 'ANTIGRAVITY_SPACING_CHANGED',
   STYLE_CHANGED: 'ANTIGRAVITY_STYLE_CHANGED',
   TAG_CHANGED: 'ANTIGRAVITY_TAG_CHANGED',
+  DUPLICATE_ELEMENT: 'ANTIGRAVITY_DUPLICATE_ELEMENT',
+  DELETE_ELEMENT: 'ANTIGRAVITY_DELETE_ELEMENT',
   RESET_SPACING: 'ANTIGRAVITY_RESET_SPACING',
   PING: 'ANTIGRAVITY_PING',
 };
@@ -74,6 +76,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       break;
     case ACTIONS.TAG_CHANGED:
       ensureInspector().updateTag(message.tagName);
+      sendResponse?.({ ok: true });
+      break;
+    case ACTIONS.DUPLICATE_ELEMENT:
+      ensureInspector().duplicateElement();
+      sendResponse?.({ ok: true });
+      break;
+    case ACTIONS.DELETE_ELEMENT:
+      ensureInspector().deleteElement();
       sendResponse?.({ ok: true });
       break;
     case ACTIONS.RESET_SPACING:
