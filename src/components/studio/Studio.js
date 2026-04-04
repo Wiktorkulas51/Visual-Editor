@@ -37,9 +37,13 @@ export function createStudio(shadowRoot, handlers, options = {}) {
         });
         
         const typoSection = createTypographySection({
+          tagName: selection.tagName,
           initialStyles: selection.styles || {},
           onStyleChange: (prop, value) => {
              if (handlers.onStyleChange) handlers.onStyleChange(prop, value);
+          },
+          onTagChange: (tagName) => {
+             if (handlers.onTagChange) handlers.onTagChange(tagName);
           }
         });
 

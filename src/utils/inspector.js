@@ -377,6 +377,42 @@ export function createInspectorManager({ onSelectionChange, onStateChange } = {}
       onStateChange?.({ active: state.active, locked: state.locked });
     },
     clearSelection,
+    updateTag(newTagName) {
+      if (!state.selectedElement || !newTagName) {
+        return;
+      }
+
+      const el = state.selectedElement;
+      if (el.tagName.toLowerCase() === newTagName.toLowerCase()) {
+        return;
+      }
+
+      // 1. Create new element
+      const newEl = document.createElement(newTagName);
+      
+      // 2. Copy all attributes
+      for (const attr of el.attributes) {
+        newEl.setAttribute(attr.name, attr.value);
+      }
+      
+      // 3. Move children
+      while (el.firstChild) {
+        newEl.appendChild(el.firstChild);
+      }
+      
+      // 4. Replace in DOM
+      if (el.parentNode) {
+        el.parentNode.replaceChild(newEl, el);
+      }
+      
+      // 5. Update state and sync
+      state.selectedElement = newEl;
+      syncSelection();
+      
+      // Re-show selection box
+      const rect = getElementRect(newEl);
+      layer.showSelection(rect, buildElementLabel(newEl));
+    },
     updateStyle(property, value) {
       if (!state.selectedElement) {
         console.warn('[Inspector] Cannot update style: no element selected.');

@@ -7,6 +7,7 @@ const ACTIONS = {
   SELECTION_CHANGED: 'ANTIGRAVITY_SELECTION_CHANGED',
   SPACING_CHANGED: 'ANTIGRAVITY_SPACING_CHANGED',
   STYLE_CHANGED: 'ANTIGRAVITY_STYLE_CHANGED',
+  TAG_CHANGED: 'ANTIGRAVITY_TAG_CHANGED',
   RESET_SPACING: 'ANTIGRAVITY_RESET_SPACING',
   PING: 'ANTIGRAVITY_PING',
 };
@@ -69,6 +70,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       break;
     case ACTIONS.STYLE_CHANGED:
       ensureInspector().updateStyle(message.property, message.value);
+      sendResponse?.({ ok: true });
+      break;
+    case ACTIONS.TAG_CHANGED:
+      ensureInspector().updateTag(message.tagName);
       sendResponse?.({ ok: true });
       break;
     case ACTIONS.RESET_SPACING:

@@ -26,6 +26,7 @@ async function boot() {
         onInspectToggle: () => {},
         onSpacingChange: handleSpacingChange,
         onStyleChange: handleStyleChange,
+        onTagChange: handleTagChange,
         onResetSpacing: handleResetSpacing,
       },
       { mode: 'sidepanel' },
@@ -118,6 +119,11 @@ async function handleSpacingChange(property, side, value) {
 async function handleStyleChange(property, value) {
   if (!state.activeTabId) return;
   await sendTabMessage(state.activeTabId, { action: ACTIONS.STYLE_CHANGED, property, value }, { frameId: state.activeFrameId }).catch(() => {});
+}
+
+async function handleTagChange(tagName) {
+  if (!state.activeTabId) return;
+  await sendTabMessage(state.activeTabId, { action: ACTIONS.TAG_CHANGED, tagName }, { frameId: state.activeFrameId }).catch(() => {});
 }
 
 async function handleResetSpacing() {

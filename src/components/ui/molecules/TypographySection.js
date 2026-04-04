@@ -2,9 +2,27 @@ import { createSegmentedControl, createLabel } from '../atoms/Atoms.js';
 import { Icons } from '../atoms/Icons.js';
 import { FontSizeLabels, FontSizes, FontWeights, LetterSpacings } from '../../../utils/tokens.js';
 
-export function createTypographySection({ onStyleChange, initialStyles = {} }) {
+export function createTypographySection({ onStyleChange, onTagChange, tagName, initialStyles = {} }) {
   const container = document.createElement('div');
   container.className = 'flex flex-col gap-3 p-3 border-b border-white/5';
+
+  // 0. TAG TYPE (SEO & Semantics)
+  const tagGroup = document.createElement('div');
+  tagGroup.className = 'flex flex-col gap-2';
+  tagGroup.appendChild(createLabel('Tag Type'));
+  tagGroup.appendChild(createSegmentedControl({
+    options: [
+      { label: 'DIV', value: 'div' },
+      { label: 'H1', value: 'h1' },
+      { label: 'H2', value: 'h2' },
+      { label: 'H3', value: 'h3' },
+      { label: 'P', value: 'p' },
+      { label: 'SEC', value: 'section', title: 'Section' },
+    ],
+    activeValue: tagName || 'div',
+    onChange: (val) => onTagChange(val)
+  }));
+  container.appendChild(tagGroup);
 
   // 1. SIZE (Full Width to avoid overflow)
   const sizeGroup = document.createElement('div');
