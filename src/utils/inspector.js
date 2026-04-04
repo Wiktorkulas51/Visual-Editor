@@ -220,6 +220,7 @@ export function createInspectorManager({ onSelectionChange, onStateChange } = {}
     locked: false,
     hoveredElement: null,
     selectedElement: null,
+    editing: false,
   };
 
   function syncSelection() {
@@ -249,7 +250,7 @@ export function createInspectorManager({ onSelectionChange, onStateChange } = {}
   }
 
   function handleMouseMove(event) {
-    if (!state.active) {
+    if (!state.active || state.editing) {
       return;
     }
 
@@ -267,8 +268,11 @@ export function createInspectorManager({ onSelectionChange, onStateChange } = {}
     }
   }
 
+  let lastClickTime = 0;
+  let lastTarget = null;
+
   function handleClick(event) {
-    if (!state.active) {
+    if (!state.active || state.editing) {
       return;
     }
 
@@ -279,6 +283,18 @@ export function createInspectorManager({ onSelectionChange, onStateChange } = {}
 
     event.preventDefault();
     event.stopPropagation();
+    event.stopImmediatePropagation();
+
+    const now = Date.now();
+    const isSecondClick = target === lastTarget && (now - lastClickTime) < 350;
+    
+    lastClickTime = now;
+    lastTarget = target;
+
+    if (isSecondClick) {
+      startEditing(target);
+      return;
+    }
 
     state.locked = true;
     state.selectedElement = target;
@@ -289,16 +305,66 @@ export function createInspectorManager({ onSelectionChange, onStateChange } = {}
     onStateChange?.({ active: state.active, locked: state.locked });
   }
 
-  function handleKeyDown(event) {
-    if (event.key !== 'Escape' || !state.locked) {
+  function startEditing(target) {
+    // Only allow editing if the element has some text or is a text container
+    if (target.children.length > 8 && !target.innerText.trim()) {
       return;
     }
 
-    clearSelection();
+    state.editing = true;
+    layer.hideHover();
+    layer.hideSelection();
+    
+    target.contentEditable = 'true';
+    target.focus();
+    
+    // Select all text if it's a simple text element
+    if (target.children.length === 0 || (target.children.length === 1 && target.firstElementChild.children.length === 0)) {
+      const range = document.createRange();
+      range.selectNodeContents(target);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+
+    const onBlur = () => {
+      target.contentEditable = 'false';
+      state.editing = false;
+      target.removeEventListener('blur', onBlur);
+      // Re-enable selection boxes
+      if (state.selectedElement === target) {
+        layer.showSelection(getElementRect(target), buildElementLabel(target));
+      }
+      syncSelection();
+    };
+
+    target.addEventListener('blur', onBlur, { once: true });
+  }
+
+  function handleDblClick(event) {
+    // Relying on custom handleClick detection instead to avoid button issues
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  function handleKeyDown(event) {
+    if (event.key !== 'Escape') {
+      return;
+    }
+
+    if (state.editing) {
+      document.activeElement?.blur();
+      return;
+    }
+
+    if (state.locked) {
+      clearSelection();
+    }
   }
 
   document.addEventListener('mousemove', handleMouseMove, true);
   document.addEventListener('click', handleClick, true);
+  document.addEventListener('dblclick', handleDblClick, true);
   window.addEventListener('keydown', handleKeyDown, true);
 
   return {
@@ -351,6 +417,7 @@ export function createInspectorManager({ onSelectionChange, onStateChange } = {}
     destroy() {
       document.removeEventListener('mousemove', handleMouseMove, true);
       document.removeEventListener('click', handleClick, true);
+      document.removeEventListener('dblclick', handleDblClick, true);
       window.removeEventListener('keydown', handleKeyDown, true);
       layer.destroy();
     },
