@@ -161,13 +161,37 @@ export function buildOverlayBoxStyles(rect) {
   };
 }
 
+function scanColorTokens() {
+  const root = document.documentElement;
+  const style = getComputedStyle(root);
+  const tokens = new Set();
+  
+  // common names plus iteration over all properties
+  const commonNames = [
+    '--brand', '--primary', '--secondary', '--accent', '--bg', '--background', '--text',
+    '--blue-500', '--red-500', '--green-500', '--slate-900', '--gray-100'
+  ];
+
+  commonNames.forEach(name => {
+    const val = style.getPropertyValue(name).trim();
+    if (val && (val.startsWith('#') || val.startsWith('rgb'))) {
+      tokens.add(val);
+    }
+  });
+
+  return Array.from(tokens).slice(0, 12);
+}
+
 export function buildSelectionSnapshot({ tagName, id = '', className = '', rect }) {
   const elementLike = { tagName, id, className };
+  const colorTokens = scanColorTokens();
+  
   return {
     label: buildElementLabel(elementLike),
     tagName: tagName.toLowerCase(),
     width: `${Math.round(rect?.width ?? 0)}px`,
     height: `${Math.round(rect?.height ?? 0)}px`,
+    colorTokens,
   };
 }
 
@@ -208,6 +232,9 @@ function applyStyleSnapshot(element) {
       fontWeight: computedStyle.fontWeight,
       textAlign: computedStyle.textAlign,
       letterSpacing: computedStyle.letterSpacing,
+      backgroundColor: computedStyle.backgroundColor,
+      color: computedStyle.color,
+      opacity: computedStyle.opacity,
       borderRadius: computedStyle.borderRadius,
     }
   };

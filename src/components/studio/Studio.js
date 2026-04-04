@@ -20,12 +20,22 @@ export function createStudio(shadowRoot, handlers, options = {}) {
   });
 
   shadowRoot.appendChild(panel.element);
+  
+  let currentElementKey = null;
 
   return {
     setSelection(selection) {
       panel.setSelection(selection);
       
       const properties = panel.element.querySelector('#inspector-properties');
+      const newKey = selection ? `${selection.tagName}-${selection.label}` : null;
+
+      // Only re-render sections if we actually switched elements
+      if (newKey === currentElementKey && selection) {
+        return;
+      }
+      currentElementKey = newKey;
+      
       properties.innerHTML = ''; // Clear old sections
       
       if (selection) {
@@ -48,6 +58,7 @@ export function createStudio(shadowRoot, handlers, options = {}) {
         });
 
         const visualsSection = createVisualsSection({
+          selection: selection,
           initialStyles: selection.styles || {},
           onStyleChange: (prop, value) => {
              if (handlers.onStyleChange) handlers.onStyleChange(prop, value);

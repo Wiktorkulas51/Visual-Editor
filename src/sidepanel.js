@@ -10,7 +10,44 @@ const state = {
   activeFrameId: null,
   previousFrameId: null,
   inspectMode: true,
+  selection: null,
 };
+
+let lastSelectionId = null;
+
+function updateUI(force = false) {
+  const container = document.getElementById('app');
+  if (!container || !state.selection) return;
+
+  // Only re-render if selection changed or forced
+  const currentId = `${state.selection.tagName}-${state.selection.label}`;
+  if (!force && currentId === lastSelectionId) {
+    return;
+  }
+  lastSelectionId = currentId;
+
+  const studio = createStudio({
+    selection: state.selection,
+    handlers: {
+      onInspectToggle: () => {
+        state.inspectMode = !state.inspectMode;
+        chrome.tabs.sendMessage(state.activeTabId, { action: ACTIONS.INSPECT_MODE_CHANGED, enabled: state.inspectMode });
+      },
+      onSpacingChange: handleSpacingChange,
+      onStyleChange: (prop, val) => {
+        // Update local state to keep it snappy
+        if (state.selection?.styles) state.selection.styles[prop] = val;
+        handleStyleChange(prop, val);
+      },
+      onTagChange: handleTagChange,
+      onResetSpacing: handleResetSpacing,
+    },
+    config: { mode: 'sidepanel' },
+  });
+
+  container.innerHTML = '';
+  container.appendChild(studio);
+}
 
 async function boot() {
   try {
