@@ -1,166 +1,91 @@
-import { createSegmentedControl, createLabel, createColorInput, createSlider } from '../atoms/Atoms.js';
+import { createSegmentedControl, createLabel, createSlider, createIconButton } from '../atoms/Atoms.js';
 import { Icons } from '../atoms/Icons.js';
 import { RadiiLabels, Radii } from '../../../utils/tokens.js';
 
-function rgbToHex(rgb) {
-  if (!rgb || rgb === 'transparent' || rgb === 'rgba(0, 0, 0, 0)') return '#ffffff';
-  const matches = rgb.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)$/);
-  if (!matches) return '#ffffff';
-  
-  const r = parseInt(matches[1]).toString(16).padStart(2, '0');
-  const g = parseInt(matches[2]).toString(16).padStart(2, '0');
-  const b = parseInt(matches[3]).toString(16).padStart(2, '0');
-  
-  return `#${r}${g}${b}`;
-}
-
-function createColorPickerWithTokens({ label, value, onChange, tokens = [] }) {
-  const container = document.createElement('div');
-  container.className = 'flex flex-col gap-2';
-  
-  container.appendChild(createColorInput({ label, value, onChange }));
-  
-  const tokenContainer = document.createElement('div');
-  tokenContainer.className = 'flex flex-wrap gap-1.5 px-0.5';
-  
-  const displayTokens = (tokens && tokens.length > 0) 
-    ? tokens 
-    : ['#ffffff', '#000000', '#3b82f6', '#10b981', '#f59e0b', '#ef4444'];
-  
-  displayTokens.forEach(token => {
-    const swatch = document.createElement('button');
-    swatch.className = 'h-3.5 w-3.5 rounded-full border border-white/10 hover:scale-125 transition-transform shadow-sm';
-    swatch.style.backgroundColor = token;
-    swatch.title = token;
-    swatch.addEventListener('click', () => onChange(token));
-    tokenContainer.appendChild(swatch);
-  });
-  
-  container.appendChild(tokenContainer);
-  return container;
-}
-
-export function createVisualsSection({ onStyleChange, initialStyles = {}, selection = {} }) {
+export function createVisualsSection({ onStyleChange, initialStyles = {} }) {
   const container = document.createElement('div');
   container.className = 'flex flex-col gap-4 p-3 border-b border-white/5';
 
-  const tokens = selection.colorTokens || [];
+  // State local for transformations (since we use modern individual CSS properties)
+  const scaleParts = initialStyles.scale && initialStyles.scale !== 'none' ? initialStyles.scale.split(' ') : ['1', '1'];
+  let currentFlipX = scaleParts[0] === '-1' ? -1 : 1;
+  let currentFlipY = scaleParts[1] === '-1' ? -1 : 1;
 
-  // 1. COLORS
-  const colorGroup = document.createElement('div');
-  colorGroup.className = 'grid grid-cols-2 gap-3';
-  
-  colorGroup.appendChild(createColorPickerWithTokens({
-    label: 'Text',
-    value: rgbToHex(initialStyles['color']),
-    tokens: tokens,
-    onChange: (val) => onStyleChange('color', val)
-  }));
-
-  colorGroup.appendChild(createColorPickerWithTokens({
-    label: 'Background',
-    value: rgbToHex(initialStyles['background-color']),
-    tokens: tokens,
-    onChange: (val) => onStyleChange('backgroundColor', val)
-  }));
-  
-  container.appendChild(colorGroup);
-
-  // 2. OPACITY
-  const rawOpacity = initialStyles['opacity'];
-  const opacityValue = rawOpacity !== undefined ? Math.round(parseFloat(rawOpacity) * 100) : 100;
-  
-  container.appendChild(createSlider({
-    label: 'Opacity',
-    min: 0,
-    max: 100,
-    value: opacityValue,
-    unit: '%',
-    onChange: (val) => onStyleChange('opacity', (val / 100).toString())
-  }));
-
-  // 3. CORNER RADIUS
-  const radiusContainer = document.createElement('div');
-  radiusContainer.className = 'flex flex-col gap-2 pt-2';
-  radiusContainer.appendChild(createLabel('Corners (Rounded)'));
-  
-  const currentRadius = initialStyles['border-radius'] || '0px';
-  // Standardize radius for matching (e.g., '8px 8px 8px 8px' -> '8px')
-  const baseRadius = currentRadius.split(' ')[0] || '0px';
-
-  radiusContainer.appendChild(createSegmentedControl({
+  // 1. CORNER RADIUS (Grouped)
+  const radiusGroup = document.createElement('div');
+  radiusGroup.className = 'flex flex-col gap-2';
+  radiusGroup.appendChild(createLabel('Rounded Corners'));
+  radiusGroup.appendChild(createSegmentedControl({
     options: RadiiLabels.map(label => ({ label, value: Radii[label.toUpperCase()] || '0px' })),
-    activeValue: RadiiLabels.map(l => Radii[l.toUpperCase()]).includes(baseRadius) ? baseRadius : '0px',
+    activeValue: initialStyles.borderRadius || '0px',
     onChange: (val) => onStyleChange('borderRadius', val)
   }));
-  container.appendChild(radiusContainer);
-  
-  // 4. BORDERS
-  const borderGroup = document.createElement('div');
-  borderGroup.className = 'flex flex-col gap-3 pt-2';
-  
-  const borderStyleRow = document.createElement('div');
-  borderStyleRow.className = 'flex flex-col gap-2';
-  borderStyleRow.appendChild(createLabel('Border Style'));
-  
-  const borderWidthValue = parseInt(initialStyles['border-width']) || 0;
+  container.appendChild(radiusGroup);
 
-  borderStyleRow.appendChild(createSegmentedControl({
-    options: [
-      { label: 'None', value: 'none' },
-      { label: 'Solid', value: 'solid' },
-      { label: 'Dashed', value: 'dashed' }
-    ],
-    activeValue: initialStyles['border-style'] || 'none',
-    onChange: (val) => {
-      onStyleChange('borderStyle', val);
-      // Auto-set width if 0 to make border visible and persist in computed styles
-      if (val !== 'none' && borderWidthValue === 0) {
-        onStyleChange('borderWidth', '1px');
-      }
-    }
-  }));
-  borderGroup.appendChild(borderStyleRow);
-  
-  borderGroup.appendChild(createSlider({
-    label: 'Border Width',
+  // 2. SLIDERS ROW (Rotate & Opacity)
+  const sliderRow = document.createElement('div');
+  sliderRow.className = 'grid grid-cols-1 gap-4';
+
+  // Opacity
+  const opacityVal = (initialStyles.opacity !== undefined && initialStyles.opacity !== 'none') ? parseFloat(initialStyles.opacity) : 1;
+  sliderRow.appendChild(createSlider({
+    label: 'Opacity',
     min: 0,
-    max: 20,
-    value: borderWidthValue,
-    unit: 'px',
-    onChange: (val) => onStyleChange('borderWidth', `${val}px`)
+    max: 1,
+    step: 0.01,
+    value: opacityVal,
+    unit: '',
+    onChange: (val) => onStyleChange('opacity', val)
   }));
-  
-  container.appendChild(borderGroup);
 
-  // 5. SHADOWS
-  const shadowContainer = document.createElement('div');
-  shadowContainer.className = 'flex flex-col gap-2 pt-2';
-  shadowContainer.appendChild(createLabel('Box Shadow'));
-  
-  const shadowPresets = [
-    { label: 'None', value: 'none', match: 'none' },
-    { label: 'Soft', value: '0 2px 12px rgba(0,0,0,0.08)', match: '2px 12px' },
-    { label: 'Hard', value: '0 8px 32px rgba(0,0,0,0.16)', match: '8px 32px' },
-    { label: 'Floating', value: '0 24px 64px rgba(0,0,0,0.24)', match: '24px 64px' }
-  ];
-
-  const currentShadow = initialStyles['box-shadow'] || 'none';
-  // Use fuzzy matching for shadows to ignore color format differences
-  const matchingPreset = shadowPresets.find(p => {
-    if (p.value === 'none') return currentShadow === 'none' || currentShadow.includes('rgba(0, 0, 0, 0)');
-    return currentShadow.includes(p.match);
-  }) || shadowPresets[0];
-
-  shadowContainer.appendChild(createSegmentedControl({
-    options: shadowPresets.map(p => ({ label: p.label, value: p.value })),
-    activeValue: matchingPreset.value,
-    onChange: (val) => onStyleChange('boxShadow', val)
+  // Rotate
+  const rotateVal = (initialStyles.rotate && initialStyles.rotate !== 'none') ? parseInt(initialStyles.rotate) : 0;
+  sliderRow.appendChild(createSlider({
+    label: 'Rotate',
+    min: 0,
+    max: 360,
+    step: 1,
+    value: rotateVal,
+    unit: '°',
+    onChange: (val) => onStyleChange('rotate', `${val}deg`)
   }));
+
+  container.appendChild(sliderRow);
+
+  // 3. FLIP CONTROLS
+  const flipGroup = document.createElement('div');
+  flipGroup.className = 'flex flex-col gap-2';
+  flipGroup.appendChild(createLabel('Flip element'));
   
-  container.appendChild(shadowContainer);
-  
-  container.appendChild(shadowContainer);
+  const flipActions = document.createElement('div');
+  flipActions.className = 'flex gap-2';
+
+  const btnFlipH = createIconButton({
+    icon: Icons.FLIP_H,
+    title: 'Flip Horizontal',
+    active: currentFlipX === -1,
+    onClick: () => {
+      currentFlipX = currentFlipX === 1 ? -1 : 1;
+      onStyleChange('scale', `${currentFlipX} ${currentFlipY}`);
+      btnFlipH.classList.toggle('active-action', currentFlipX === -1);
+    }
+  });
+
+  const btnFlipV = createIconButton({
+    icon: Icons.FLIP_V,
+    title: 'Flip Vertical',
+    active: currentFlipY === -1,
+    onClick: () => {
+      currentFlipY = currentFlipY === 1 ? -1 : 1;
+      onStyleChange('scale', `${currentFlipX} ${currentFlipY}`);
+      btnFlipV.classList.toggle('active-action', currentFlipY === -1);
+    }
+  });
+
+  flipActions.appendChild(btnFlipH);
+  flipActions.appendChild(btnFlipV);
+  flipGroup.appendChild(flipActions);
+  container.appendChild(flipGroup);
 
   return container;
 }

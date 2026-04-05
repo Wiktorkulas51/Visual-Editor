@@ -22,7 +22,7 @@ export function createIconButton({ icon, onClick, active = false, title = '' }) 
   button.type = 'button';
   button.title = title;
   
-  const activeClass = active ? 'bg-brand text-white shadow-premium border-brand' : 'bg-white/5 text-text-dim border-white/10 hover:bg-white/10';
+  const activeClass = active ? 'bg-white/10 text-brand border-brand ring-1 ring-white/5 shadow-premium' : 'bg-white/5 text-text-dim border-white/10 hover:bg-white/10';
   
   button.className = `flex h-11 w-11 items-center justify-center rounded-md border transition-all active:scale-90 ${activeClass}`;
   
@@ -82,6 +82,42 @@ export function createLabel(text) {
   return label;
 }
 
+export function createSlider({ label, min, max, step, value, onChange, unit = '' }) {
+  const container = document.createElement('div');
+  container.className = 'flex flex-col gap-2 group';
+
+  const header = document.createElement('div');
+  header.className = 'flex justify-between items-center';
+  
+  const labelEl = createLabel(label);
+  labelEl.className = 'mb-0'; 
+  
+  const valueDisplay = document.createElement('span');
+  valueDisplay.className = 'text-[9px] font-mono font-bold text-brand bg-brand/10 px-1.5 py-0.5 rounded border border-brand/20';
+  valueDisplay.textContent = `${value}${unit}`;
+
+  header.appendChild(labelEl);
+  header.appendChild(valueDisplay);
+  container.appendChild(header);
+
+  const input = document.createElement('input');
+  input.type = 'range';
+  input.min = min;
+  input.max = max;
+  input.step = step;
+  input.value = value;
+  input.className = 'w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-brand transition-all hover:bg-white/20';
+
+  input.addEventListener('input', (e) => {
+    const val = e.target.value;
+    valueDisplay.textContent = `${val}${unit}`;
+    onChange(val);
+  });
+
+  container.appendChild(input);
+  return container;
+}
+
 export function createInput({
   label,
   value = '',
@@ -121,67 +157,35 @@ export function createColorInput({ label, value = '#000000', onChange }) {
     container.appendChild(createLabel(label));
   }
 
-  const wrapper = document.createElement('div');
-  wrapper.className = 'flex h-11 w-full items-center gap-2 rounded-md border border-white/10 bg-white/5 px-2 transition-colors focus-within:border-brand';
+  const wrapper = document.createElement('button');
+  wrapper.className = 'flex h-11 w-full items-center gap-3 rounded-md border border-white/10 bg-white/5 px-3 transition-all hover:bg-white/10 active:scale-[0.98]';
+
+  const preview = document.createElement('div');
+  preview.className = 'h-5 w-5 rounded-sm border border-white/10 shadow-sm';
+  preview.style.backgroundColor = value;
+
+  const hex = document.createElement('span');
+  hex.className = 'text-[11px] font-mono font-bold uppercase tracking-wider text-text-dim';
+  hex.textContent = value;
+
+  wrapper.appendChild(preview);
+  wrapper.appendChild(hex);
 
   const picker = document.createElement('input');
   picker.type = 'color';
   picker.value = value;
-  picker.className = 'h-7 w-7 shrink-0 cursor-pointer overflow-hidden rounded-sm border-none bg-transparent p-0 [&::-webkit-color-swatch-wrapper]:p-0 [&::-webkit-color-swatch]:border-none [&::-webkit-color-swatch]:rounded-sm';
-
-  const text = document.createElement('input');
-  text.type = 'text';
-  text.value = value.toUpperCase();
-  text.className = 'w-full bg-transparent text-[11px] font-mono font-bold uppercase tracking-wider text-text-main outline-none placeholder:text-white/20';
-  text.placeholder = '#000000';
-
-  const notify = (val) => {
-    const cleanVal = val.startsWith('#') ? val : `#${val}`;
-    if (/^#[0-9A-F]{6}$/i.test(cleanVal)) {
-      onChange(cleanVal);
-      picker.value = cleanVal;
-      text.value = cleanVal.toUpperCase();
-    }
-  };
-
-  picker.addEventListener('input', (e) => notify(e.target.value));
-  text.addEventListener('change', (e) => notify(e.target.value));
-
-  wrapper.appendChild(picker);
-  wrapper.appendChild(text);
-  container.appendChild(wrapper);
-
-  return container;
-}
-
-export function createSlider({ label, min = 0, max = 100, step = 1, value = 100, unit = '', onChange }) {
-  const container = document.createElement('div');
-  container.className = 'flex flex-col gap-2';
-
-  const header = document.createElement('div');
-  header.className = 'flex items-center justify-between';
-  if (label) header.appendChild(createLabel(label));
-
-  const valDisplay = document.createElement('span');
-  valDisplay.className = 'text-[10px] font-mono font-bold text-brand';
-  valDisplay.textContent = `${value}${unit}`;
-  header.appendChild(valDisplay);
+  picker.className = 'invisible absolute h-0 w-0';
   
-  container.appendChild(header);
-
-  const slider = document.createElement('input');
-  slider.type = 'range';
-  slider.min = min;
-  slider.max = max;
-  slider.step = step;
-  slider.value = value;
-  slider.className = 'h-1.5 w-full cursor-pointer appearance-none rounded-full bg-white/10 accent-brand focus:outline-none';
-
-  slider.addEventListener('input', (e) => {
-    valDisplay.textContent = `${e.target.value}${unit}`;
-    onChange(Number(e.target.value));
+  wrapper.addEventListener('click', () => picker.click());
+  picker.addEventListener('input', (e) => {
+    const val = e.target.value;
+    preview.style.backgroundColor = val;
+    hex.textContent = val;
+    onChange(val);
   });
 
-  container.appendChild(slider);
+  container.appendChild(wrapper);
+  container.appendChild(picker);
+
   return container;
 }

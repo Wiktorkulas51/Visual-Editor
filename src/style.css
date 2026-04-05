@@ -4,12 +4,21 @@
   --color-brand: oklch(0.65 0.24 260); /* Deep Electric Blue */
   --color-accent: oklch(0.70 0.30 330); /* Vibrant Violet Glow */
   
+  /* Official Palette Tokens */
+  --color-p-1: oklch(0.65 0.24 260);
+  --color-p-2: oklch(0.70 0.30 330);
+  --color-p-3: oklch(0.55 0.20 260); /* Muted Primary */
+  --color-white: oklch(0.98 0.01 260);
+  --color-white-important: #ffffff;
+  --color-slate-900: oklch(0.12 0.02 260);
+  --color-slate-800: oklch(0.16 0.03 260);
+  
   --color-surface: oklch(0.12 0.02 260); /* Deep Slate Surface */
   --color-surface-glass: oklch(0.16 0.03 260 / 60%); /* Glassmorphism Base */
   
   --color-text-main: oklch(0.98 0.01 260);
   --color-text-dim: oklch(0.75 0.02 260);
-
+  
   --radius-button: 0.8rem;
   --shadow-premium: 0 0 20px -5px oklch(0.65 0.24 260 / 30%);
 }

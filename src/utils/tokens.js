@@ -44,6 +44,16 @@ export const Radii = {
 };
 export const RadiiLabels = ['NONE', 'S', 'M', 'L', 'XL', 'FULL'];
 
+export const ColorTokens = {
+  PRIMARY: 'oklch(0.65 0.24 260)',
+  SECONDARY: 'oklch(0.70 0.30 330)',
+  MUTED: 'oklch(0.55 0.20 260)',
+  WHITE: 'oklch(0.98 0.01 260)',
+  PURE_WHITE: '#ffffff',
+  SLATE_900: 'oklch(0.12 0.02 260)',
+  SLATE_800: 'oklch(0.16 0.03 260)',
+};
+
 export const lookupSpacingToken = (value) => {
   const entry = Object.entries(SpacingTokens).find(([_, val]) => val === value);
   return entry ? entry[0] : null;

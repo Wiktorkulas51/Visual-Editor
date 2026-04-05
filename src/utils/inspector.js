@@ -166,20 +166,22 @@ function scanColorTokens() {
   const style = getComputedStyle(root);
   const tokens = new Set();
   
-  // common names plus iteration over all properties
-  const commonNames = [
-    '--brand', '--primary', '--secondary', '--accent', '--bg', '--background', '--text',
-    '--blue-500', '--red-500', '--green-500', '--slate-900', '--gray-100'
-  ];
-
-  commonNames.forEach(name => {
-    const val = style.getPropertyValue(name).trim();
-    if (val && (val.startsWith('#') || val.startsWith('rgb'))) {
-      tokens.add(val);
+  // Search for all custom properties that look like colors
+  const allProps = Array.from(style);
+  for (const prop of allProps) {
+    if (prop.startsWith('--')) {
+      const val = style.getPropertyValue(prop).trim();
+      
+      // Basic heuristic for colors: starts with #, rgb, oklch, hsl or is a CSS color keyword supported by the browser
+      if (val && (val.startsWith('#') || val.startsWith('rgb') || val.startsWith('oklch') || val.startsWith('hsl'))) {
+        tokens.add(val);
+      }
+      
+      if (tokens.size >= 24) break; // Don't over-scan
     }
-  });
+  }
 
-  return Array.from(tokens).slice(0, 12);
+  return Array.from(tokens);
 }
 
 export function buildSelectionSnapshot({ tagName, id = '', className = '', rect }) {
@@ -238,15 +240,15 @@ function applyStyleSnapshot(element) {
       'fontWeight': computedStyle.fontWeight,
       'font-weight': computedStyle.fontWeight,
       'textAlign': computedStyle.textAlign,
-      'text-align': computedStyle.textAlign,
-      'letterSpacing': computedStyle.letterSpacing,
-      'letter-spacing': computedStyle.letterSpacing,
+      textAlign: computedStyle.textAlign,
+      letterSpacing: computedStyle.letterSpacing,
+      borderRadius: computedStyle.borderRadius,
+      opacity: computedStyle.opacity,
+      rotate: computedStyle.rotate,
+      scale: computedStyle.scale,
       'backgroundColor': computedStyle.backgroundColor,
       'background-color': computedStyle.backgroundColor,
       'color': computedStyle.color,
-      'opacity': computedStyle.opacity,
-      'borderRadius': computedStyle.borderRadius,
-      'border-radius': computedStyle.borderRadius,
       'borderStyle': computedStyle.borderStyle,
       'border-style': computedStyle.borderStyle,
       'borderWidth': computedStyle.borderWidth,
