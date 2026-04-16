@@ -197,6 +197,142 @@ export function buildSelectionSnapshot({ tagName, id = '', className = '', rect 
   };
 }
 
+function truncateText(text, maxLen = 200) {
+  const t = typeof text === 'string' ? text.replace(/\s+/g, ' ').trim() : '';
+  if (!t) return '';
+  if (t.length <= maxLen) return t;
+  return t.slice(0, maxLen).trim() + '…';
+}
+
+function buildAttributesSnapshot(element, { maxDataAttrs = 12 } = {}) {
+  const attrs = {};
+
+  if (element.id) attrs.id = element.id;
+  if (element.getAttribute?.('name')) attrs.name = element.getAttribute('name');
+
+  // Prefer data-* (most AI/test-friendly), but also keep a few high-signal attrs.
+  const all = element.attributes ? Array.from(element.attributes) : [];
+  let dataCount = 0;
+  for (const attr of all) {
+    const { name, value } = attr;
+    if (name.startsWith('data-')) {
+      dataCount += 1;
+      if (dataCount > maxDataAttrs) continue;
+      attrs[name] = value;
+      continue;
+    }
+
+    if (name === 'aria-label' || name === 'role' || name === 'title' || name === 'type' || name === 'name') {
+      attrs[name] = value;
+    }
+  }
+
+  // Class is useful even if we also keep `label`, but keep it small-ish.
+  if (typeof element.className === 'string') {
+    const cls = element.className.trim().replace(/\s+/g, ' ');
+    if (cls) attrs.className = cls;
+  }
+
+  return attrs;
+}
+
+function buildPathSnapshot(element, { maxDepth = 4 } = {}) {
+  const parts = [];
+  let cur = element;
+
+  // Stop at <body> / document fragment. We want only "real DOM" path.
+  while (cur && cur instanceof Element && parts.length < maxDepth) {
+    const tag = cur.tagName.toLowerCase();
+    const id = cur.id ? `#${cur.id}` : '';
+    const dataKey = (() => {
+      // Most stable breadcrumb segments come from data-testid/data-component
+      const ds = cur.getAttribute?.('data-testid') || cur.getAttribute?.('data-component');
+      return ds ? `[${ds}]` : '';
+    })();
+    parts.unshift(`${tag}${id}${dataKey}`);
+
+    if (cur.tagName.toLowerCase() === 'body') break;
+    cur = cur.parentElement;
+  }
+
+  return parts.join(' > ');
+}
+
+function buildChildrenSummary(element, { maxSampleTags = 6 } = {}) {
+  if (!(element instanceof Element)) return '';
+
+  const children = Array.from(element.children || []);
+  const total = children.length;
+
+  const tagCounts = new Map();
+  let buttonLike = 0;
+  let inputLike = 0;
+  let textLike = 0;
+
+  for (const child of children) {
+    const t = child.tagName.toLowerCase();
+    tagCounts.set(t, (tagCounts.get(t) ?? 0) + 1);
+
+    if (t === 'button' || t === 'a') buttonLike += 1;
+    if (t === 'input' || t === 'textarea' || t === 'select') inputLike += 1;
+    if (t === 'span' || t === 'p' || t === 'h1' || t === 'h2' || t === 'h3' || t === 'h4') textLike += 1;
+  }
+
+  const topTags = Array.from(tagCounts.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, maxSampleTags)
+    .map(([tag, count]) => `${tag}:${count}`)
+    .join(', ');
+
+  return `children:${total}; buttons:${buttonLike}; inputs:${inputLike}; text:${textLike}${topTags ? `; top:[${topTags}]` : ''}`;
+}
+
+function filterKeyStyles(styleSnapshot) {
+  // Heuristics to reduce noise.
+  const out = {};
+
+  const pushIf = (k, v) => {
+    if (v === undefined || v === null) return;
+    if (typeof v === 'string' && !v.trim()) return;
+    out[k] = v;
+  };
+
+  // Keep layout-ish fields if they differ from common defaults.
+  if (styleSnapshot.display && styleSnapshot.display !== 'block') pushIf('display', styleSnapshot.display);
+  if (styleSnapshot.flexDirection && styleSnapshot.flexDirection !== 'row') pushIf('flexDirection', styleSnapshot.flexDirection);
+  if (styleSnapshot.gap && styleSnapshot.gap !== '0px' && styleSnapshot.gap !== '0') pushIf('gap', styleSnapshot.gap);
+  if (styleSnapshot.flexWrap && styleSnapshot.flexWrap !== 'nowrap') pushIf('flexWrap', styleSnapshot.flexWrap);
+
+  // position: include if not static
+  if (styleSnapshot.position && styleSnapshot.position !== 'static') pushIf('position', styleSnapshot.position);
+
+  if (styleSnapshot.zIndex && styleSnapshot.zIndex !== 'auto') pushIf('zIndex', styleSnapshot.zIndex);
+
+  // Typography
+  if (styleSnapshot.fontSize && styleSnapshot.fontSize !== '16px') pushIf('fontSize', styleSnapshot.fontSize);
+  if (styleSnapshot.fontWeight && styleSnapshot.fontWeight !== '400') pushIf('fontWeight', styleSnapshot.fontWeight);
+  if (styleSnapshot.textAlign && styleSnapshot.textAlign !== 'start' && styleSnapshot.textAlign !== 'left') pushIf('textAlign', styleSnapshot.textAlign);
+  if (styleSnapshot.letterSpacing && styleSnapshot.letterSpacing !== 'normal') pushIf('letterSpacing', styleSnapshot.letterSpacing);
+
+  // Geometry / effects that matter
+  if (styleSnapshot.borderRadius && styleSnapshot.borderRadius !== '0px') pushIf('borderRadius', styleSnapshot.borderRadius);
+  if (styleSnapshot.opacity && styleSnapshot.opacity !== '1') pushIf('opacity', styleSnapshot.opacity);
+  if (styleSnapshot.rotate && styleSnapshot.rotate !== '0deg') pushIf('rotate', styleSnapshot.rotate);
+  if (styleSnapshot.scale && styleSnapshot.scale !== '1') pushIf('scale', styleSnapshot.scale);
+
+  // Color: keep only foreground/background (avoid dumping tokens list)
+  if (styleSnapshot.backgroundColor && styleSnapshot.backgroundColor !== 'rgba(0, 0, 0, 0)' && styleSnapshot.backgroundColor !== 'transparent') {
+    pushIf('backgroundColor', styleSnapshot.backgroundColor);
+  }
+  if (styleSnapshot.color && styleSnapshot.color !== 'rgb(0, 0, 0)' && styleSnapshot.color !== 'rgba(0, 0, 0, 0)') {
+    pushIf('color', styleSnapshot.color);
+  }
+
+  if (styleSnapshot.boxShadow && styleSnapshot.boxShadow !== 'none') pushIf('boxShadow', styleSnapshot.boxShadow);
+
+  return out;
+}
+
 function getElementRect(element) {
   const rect = element.getBoundingClientRect();
   return {
@@ -275,15 +411,39 @@ export function createInspectorManager({ onSelectionChange, onStateChange } = {}
       return;
     }
 
-    const rect = getElementRect(state.selectedElement);
+    const el = state.selectedElement;
+    const rect = getElementRect(el);
+
+    const selectionBase = buildSelectionSnapshot({
+      tagName: el.tagName,
+      id: el.id,
+      className: el.className,
+      rect,
+    });
+
+    const styleSnapshot = applyStyleSnapshot(el);
+    const keyStyles = filterKeyStyles(styleSnapshot.styles);
+
+    const inner = (() => {
+      // innerText is often more meaningful than textContent (excludes hidden via CSS).
+      // Limit to avoid gigantic payloads.
+      const raw = el.innerText || el.textContent || '';
+      return truncateText(raw, 200);
+    })();
+
+    const attributes = buildAttributesSnapshot(el);
+    const path = buildPathSnapshot(el, { maxDepth: 4 });
+    const childrenSummary = buildChildrenSummary(el);
+
     onSelectionChange?.({
-      ...buildSelectionSnapshot({
-        tagName: state.selectedElement.tagName,
-        id: state.selectedElement.id,
-        className: state.selectedElement.className,
-        rect,
-      }),
-      ...applyStyleSnapshot(state.selectedElement),
+      ...selectionBase,
+      textContent: inner,
+      attributes,
+      path,
+      childrenSummary,
+      keyStyles,
+      // keep styles if other parts rely on them
+      ...styleSnapshot,
     });
   }
 

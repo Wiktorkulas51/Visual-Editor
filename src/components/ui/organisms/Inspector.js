@@ -82,12 +82,26 @@ export function createInspectorPanel({
 
       try {
         if (navigator.clipboard?.writeText) {
-          // Copy rich payload so AI can identify the element more precisely.
-          await navigator.clipboard.writeText(JSON.stringify({
-            selection: lastSelection,
-            // Helpful for deterministic UX: indicates user action occurred.
-            copiedAt: Date.now()
-          }));
+          const payload = {
+            tagName: lastSelection.tagName,
+            className: lastSelection.attributes?.className,
+            textContent: lastSelection.textContent ?? selectionLabel,
+            path: lastSelection.path,
+            dimensions: {
+              width: lastSelection.width,
+              height: lastSelection.height,
+            },
+            keyStyles: lastSelection.keyStyles,
+            attributes: lastSelection.attributes,
+            childrenSummary: lastSelection.childrenSummary,
+            key: `${lastSelection.tagName}-${lastSelection.label}`,
+            // Extra: keep the original label and color tokens for completeness,
+            // but AI usually benefits more from the top-level fields above.
+            label: lastSelection.label,
+            copiedAt: Date.now(),
+          };
+
+          await navigator.clipboard.writeText(JSON.stringify(payload, null, 0));
 
           badgeEl && (badgeEl.textContent = 'Copied');
           window.setTimeout(() => {
@@ -110,10 +124,23 @@ export function createInspectorPanel({
 
       // Fallback for environments without Clipboard API
       const ta = document.createElement('textarea');
-      ta.value = JSON.stringify({
-        selection: lastSelection,
-        copiedAt: Date.now()
-      });
+      const payload = {
+        tagName: lastSelection.tagName,
+        className: lastSelection.attributes?.className,
+        textContent: lastSelection.textContent ?? selectionLabel,
+        path: lastSelection.path,
+        dimensions: {
+          width: lastSelection.width,
+          height: lastSelection.height,
+        },
+        keyStyles: lastSelection.keyStyles,
+        attributes: lastSelection.attributes,
+        childrenSummary: lastSelection.childrenSummary,
+        key: `${lastSelection.tagName}-${lastSelection.label}`,
+        label: lastSelection.label,
+        copiedAt: Date.now(),
+      };
+      ta.value = JSON.stringify(payload, null, 0);
       ta.setAttribute('readonly', '');
       ta.style.position = 'fixed';
       ta.style.left = '-9999px';
