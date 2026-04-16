@@ -1,6 +1,6 @@
-import { createSegmentedControl, createLabel } from '../atoms/Atoms.js';
+import { createSegmentedControl, createLabel, createPalettePicker } from '../atoms/Atoms.js';
 import { Icons } from '../atoms/Icons.js';
-import { FontSizeLabels, FontSizes, FontWeights, LetterSpacings } from '../../../utils/tokens.js';
+import { FontSizeLabels, FontSizes, FontWeights, LetterSpacings, ColorTokens } from '../../../utils/tokens.js';
 
 export function createTypographySection({ onStyleChange, onTagChange, tagName, initialStyles = {} }) {
   const container = document.createElement('div');
@@ -23,6 +23,17 @@ export function createTypographySection({ onStyleChange, onTagChange, tagName, i
     onChange: (val) => onTagChange(val)
   }));
   container.appendChild(tagGroup);
+  
+  // 0.5 COLORS (Text)
+  const colorGroup = document.createElement('div');
+  colorGroup.className = 'flex flex-col gap-2';
+  colorGroup.appendChild(createLabel('Text Color'));
+  colorGroup.appendChild(createPalettePicker({
+    colors: Object.entries(ColorTokens).map(([name, value]) => ({ name, value })),
+    activeColor: initialStyles.color || ColorTokens.WHITE,
+    onChange: (val) => onStyleChange('color', val)
+  }));
+  container.appendChild(colorGroup);
 
   // 1. SIZE (Full Width to avoid overflow)
   const sizeGroup = document.createElement('div');

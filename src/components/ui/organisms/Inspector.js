@@ -1,4 +1,6 @@
 import { createInspectorToggle } from '../atoms/InspectorToggle';
+import { createIconButton } from '../atoms/Atoms.js';
+import { Icons } from '../atoms/Icons.js';
 
 export function createInspectorPanel({
   onInspectToggle,
@@ -33,8 +35,10 @@ export function createInspectorPanel({
   summary.className = 'space-y-3 rounded-2xl border border-white/10 bg-white/5 p-4';
   summary.innerHTML = `
     <div class="flex items-center justify-between gap-3">
-      <div>
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-text-dim">Selection</p>
+      <div class="min-w-0">
+        <div class="flex items-center gap-2">
+          <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-text-dim">Selection</p>
+        </div>
         <p id="selection-label" class="mt-1 text-sm font-semibold">No element selected</p>
       </div>
       <span id="selection-badge" class="rounded-full border border-white/10 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-text-dim">Idle</span>
@@ -61,13 +65,91 @@ export function createInspectorPanel({
   footer.appendChild(status);
   panel.appendChild(footer);
 
+  const selectionTitleRow = panel.querySelector('#selection-label')?.parentElement?.querySelector('div');
+  let lastSelection = null;
+
+  const copyBtn = createIconButton({
+    icon: Icons.COPY,
+    title: 'Copy selection',
+    onClick: async () => {
+      const selectionLabel = panel.querySelector('#selection-label')?.textContent ?? '';
+      if (!lastSelection || !selectionLabel || selectionLabel === 'No element selected') {
+        return;
+      }
+
+      const badgeEl = panel.querySelector('#selection-badge');
+      const prevBadgeText = badgeEl?.textContent ?? '';
+
+      try {
+        if (navigator.clipboard?.writeText) {
+          // Copy rich payload so AI can identify the element more precisely.
+          await navigator.clipboard.writeText(JSON.stringify({
+            selection: lastSelection,
+            // Helpful for deterministic UX: indicates user action occurred.
+            copiedAt: Date.now()
+          }));
+
+          badgeEl && (badgeEl.textContent = 'Copied');
+          window.setTimeout(() => {
+            if (!panel.isConnected) return;
+            // Revert based on current state; if selection disappeared, default to Idle.
+            const current = lastSelection;
+            if (!current) {
+              if (badgeEl) badgeEl.textContent = 'Idle';
+              return;
+            }
+            if (badgeEl && panel.querySelector('#selection-badge')) {
+              badgeEl.textContent = current.tagName;
+            }
+          }, 1200);
+          return;
+        }
+      } catch (e) {
+        // Fallback below
+      }
+
+      // Fallback for environments without Clipboard API
+      const ta = document.createElement('textarea');
+      ta.value = JSON.stringify({
+        selection: lastSelection,
+        copiedAt: Date.now()
+      });
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand('copy');
+        badgeEl && (badgeEl.textContent = 'Copied');
+      } finally {
+        document.body.removeChild(ta);
+      }
+
+      // Best-effort revert
+      window.setTimeout(() => {
+        if (!panel.isConnected) return;
+        if (!badgeEl) return;
+        badgeEl.textContent = lastSelection?.tagName ?? prevBadgeText ?? 'Idle';
+      }, 1200);
+    },
+  });
+  copyBtn.dataset.aiRole = 'selection-copy';
+  copyBtn.dataset.aiSelectionKey = '';
+  copyBtn.dataset.aiSelectionLabel = '';
+  copyBtn.dataset.aiSelectionTag = '';
+  copyBtn.className += ' opacity-50 pointer-events-none';
+  selectionTitleRow?.appendChild(copyBtn);
+
   return {
     element: panel,
     setSelection(selection) {
+      lastSelection = selection;
       const target = panel.querySelector('#inspector-target');
       const label = panel.querySelector('#selection-label');
       const meta = panel.querySelector('#selection-meta');
       const badge = panel.querySelector('#selection-badge');
+      const aiKeyEl = copyBtn;
 
       if (!selection) {
         target.textContent = 'Click an element to inspect it.';
@@ -75,6 +157,11 @@ export function createInspectorPanel({
         badge.textContent = 'Idle';
         meta.classList.remove('grid-cols-2');
         meta.innerHTML = '<p>Pick an element on the page to inspect its details.</p>';
+        aiKeyEl.dataset.aiSelectionKey = '';
+        aiKeyEl.dataset.aiSelectionLabel = '';
+        aiKeyEl.dataset.aiSelectionTag = '';
+        aiKeyEl.className = aiKeyEl.className.replace(' opacity-50 pointer-events-none', '');
+        aiKeyEl.className += ' opacity-50 pointer-events-none';
         return;
       }
 
@@ -86,6 +173,12 @@ export function createInspectorPanel({
         <p><span class="text-text-main">Dimensions:</span> ${selection.width} × ${selection.height}</p>
         <p><span class="text-text-main">Tag:</span> ${selection.tagName.toUpperCase()}</p>
       `;
+
+      const selectionKey = `${selection.tagName}-${selection.label}`;
+      aiKeyEl.dataset.aiSelectionKey = selectionKey;
+      aiKeyEl.dataset.aiSelectionLabel = selection.label;
+      aiKeyEl.dataset.aiSelectionTag = selection.tagName;
+      aiKeyEl.className = aiKeyEl.className.replace(' opacity-50 pointer-events-none', '');
     },
     setInspecting(isInspecting) {
       const statusEl = panel.querySelector('#inspector-status');

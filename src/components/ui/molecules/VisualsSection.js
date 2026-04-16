@@ -1,6 +1,6 @@
-import { createSegmentedControl, createLabel, createSlider, createIconButton } from '../atoms/Atoms.js';
+import { createSegmentedControl, createLabel, createSlider, createIconButton, createPalettePicker } from '../atoms/Atoms.js';
 import { Icons } from '../atoms/Icons.js';
-import { RadiiLabels, Radii } from '../../../utils/tokens.js';
+import { RadiiLabels, Radii, ColorTokens } from '../../../utils/tokens.js';
 
 export function createVisualsSection({ onStyleChange, initialStyles = {} }) {
   const container = document.createElement('div');
@@ -11,7 +11,18 @@ export function createVisualsSection({ onStyleChange, initialStyles = {} }) {
   let currentFlipX = scaleParts[0] === '-1' ? -1 : 1;
   let currentFlipY = scaleParts[1] === '-1' ? -1 : 1;
 
-  // 1. CORNER RADIUS (Grouped)
+  // 1. COLORS (Background)
+  const colorGroup = document.createElement('div');
+  colorGroup.className = 'flex flex-col gap-2';
+  colorGroup.appendChild(createLabel('Background Color'));
+  colorGroup.appendChild(createPalettePicker({
+    colors: Object.entries(ColorTokens).map(([name, value]) => ({ name, value })),
+    activeColor: initialStyles.backgroundColor || 'transparent',
+    onChange: (val) => onStyleChange('backgroundColor', val)
+  }));
+  container.appendChild(colorGroup);
+
+  // 2. CORNER RADIUS (Grouped)
   const radiusGroup = document.createElement('div');
   radiusGroup.className = 'flex flex-col gap-2';
   radiusGroup.appendChild(createLabel('Rounded Corners'));

@@ -21,6 +21,55 @@
   
   --radius-button: 0.8rem;
   --shadow-premium: 0 0 20px -5px oklch(0.65 0.24 260 / 30%);
+
+  /* Pixel HUD System: Dark Fantasy - SciFi */
+  --pixel-bg: #08080a;
+  --pixel-border: #3a3a45;
+  --pixel-blood: #9a031e;
+  --pixel-void: #5e239d;
+  --pixel-data: #00d2ff;
+  --pixel-silver: #d1d1e0;
+  
+  --font-pixel: "Silkscreen", monospace;
+  
+  /* Pixel Grid Step */
+  --pixel-unit: 2px;
+}
+
+@layer base {
+  .pixel-font {
+    font-family: var(--font-pixel);
+    letter-spacing: 0.05em;
+  }
+}
+
+@layer utilities {
+  /* Heavy Notched Corner Clipping */
+  .pixel-notched {
+    clip-path: polygon(
+      0 4px, 4px 4px, 4px 0, 
+      calc(100% - 4px) 0, calc(100% - 4px) 4px, 100% 4px,
+      100% calc(100% - 4px), calc(100% - 4px) calc(100% - 4px), calc(100% - 4px) 100%,
+      4px 100%, 4px calc(100% - 4px), 0 calc(100% - 4px)
+    );
+  }
+
+  .pixel-border-heavy {
+    box-shadow: 
+      0 0 0 2px var(--pixel-bg),
+      0 0 0 4px var(--pixel-border);
+  }
+
+  .pixel-scanlines {
+    background: linear-gradient(
+      to bottom,
+      transparent,
+      transparent 50%,
+      rgba(0, 0, 0, 0.1) 50%,
+      rgba(0, 0, 0, 0.1)
+    );
+    background-size: 100% 4px;
+  }
 }
 
 @layer base {

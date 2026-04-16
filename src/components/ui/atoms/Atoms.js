@@ -61,12 +61,21 @@ export function createSegmentedControl({ options, activeValue, onChange, size = 
     btn.className = `flex-1 flex items-center justify-center p-1.5 rounded-md text-[9px] sm:text-[10px] font-bold transition-all duration-200 border border-transparent shadow-sm whitespace-nowrap truncate`;
     
     if (activeValue === option.value) {
-      btn.className += ' bg-white/10 text-brand border-white/10 ring-1 ring-white/5';
+      btn.classList.add('bg-white/10', 'text-brand', 'border-white/10', 'ring-1', 'ring-white/5');
     } else {
-      btn.className += ' text-white/40 hover:text-white/60 hover:bg-white/5';
+      btn.classList.add('text-white/40', 'hover:text-white/60', 'hover:bg-white/5');
     }
 
     btn.addEventListener('click', () => {
+      // Clear all active states in this container
+      container.querySelectorAll('button').forEach(b => {
+        b.classList.remove('bg-white/10', 'text-brand', 'border-white/10', 'ring-1', 'ring-white/5');
+        b.classList.add('text-white/40', 'hover:text-white/60', 'hover:bg-white/5');
+      });
+      // Set active state for this button
+      btn.classList.remove('text-white/40', 'hover:text-white/60', 'hover:bg-white/5');
+      btn.classList.add('bg-white/10', 'text-brand', 'border-white/10', 'ring-1', 'ring-white/5');
+      
       onChange(option.value);
     });
     container.appendChild(btn);
@@ -186,6 +195,39 @@ export function createColorInput({ label, value = '#000000', onChange }) {
 
   container.appendChild(wrapper);
   container.appendChild(picker);
+
+  return container;
+}
+
+export function createPalettePicker({ colors, activeColor, onChange }) {
+  const container = document.createElement('div');
+  container.className = 'flex flex-wrap gap-2 py-1';
+
+  colors.forEach(({ name, value }) => {
+    const swatch = document.createElement('button');
+    swatch.title = name;
+    swatch.className = `w-7 h-7 rounded-full border-2 transition-all hover:scale-110 active:scale-95`;
+    swatch.style.backgroundColor = value;
+    
+    const isActive = activeColor === value;
+    swatch.style.borderColor = isActive ? 'oklch(0.98 0.01 260)' : 'transparent';
+    if (isActive) {
+      swatch.classList.add('shadow-[0_0_8px_rgba(255,255,255,0.3)]');
+    }
+
+    swatch.addEventListener('click', () => {
+      container.querySelectorAll('button').forEach(btn => {
+        btn.style.borderColor = 'transparent';
+        btn.classList.remove('shadow-[0_0_8px_rgba(255,255,255,0.3)]');
+      });
+      swatch.style.borderColor = 'oklch(0.98 0.01 260)';
+      swatch.classList.add('shadow-[0_0_8px_rgba(255,255,255,0.3)]');
+      
+      onChange(value);
+    });
+
+    container.appendChild(swatch);
+  });
 
   return container;
 }

@@ -3,6 +3,7 @@ import { createInspectorPanel } from '../ui/organisms/Inspector.js';
 import { createLayoutSection } from '../ui/molecules/LayoutSection.js';
 import { createTypographySection } from '../ui/molecules/TypographySection.js';
 import { createVisualsSection } from '../ui/molecules/VisualsSection.js';
+import { createStrokeSection } from '../ui/molecules/StrokeSection.js';
 import { createElementActions } from '../ui/molecules/ElementActions.js';
 
 export function createStudio(shadowRoot, handlers, options = {}) {
@@ -26,13 +27,28 @@ export function createStudio(shadowRoot, handlers, options = {}) {
 
   return {
     setSelection(selection) {
+      if (!selection) {
+        panel.setSelection(null);
+        const properties = panel.element.querySelector('#inspector-properties');
+        properties.innerHTML = '';
+        currentElementKey = null;
+        return;
+      }
+
+      const newKey = `${selection.tagName}-${selection.label}`;
+      
+      // Update basic panel info (label, rect) regardless of recreation
       panel.setSelection(selection);
       
+      if (currentElementKey === newKey) {
+        // If it's the same element, we DON'T recreate UI to preserve focus/active tabs/slider positions.
+        // The individual sections will be updated by the next fresh selection if user re-selects.
+        return;
+      }
+      
+      currentElementKey = newKey;
       const properties = panel.element.querySelector('#inspector-properties');
       properties.innerHTML = ''; // Clear old sections
-      
-      const newKey = selection ? `${selection.tagName}-${selection.label}` : null;
-      currentElementKey = newKey;
       
       if (selection) {
         const elementActions = createElementActions({
@@ -67,10 +83,18 @@ export function createStudio(shadowRoot, handlers, options = {}) {
           }
         });
 
+        const strokeSection = createStrokeSection({
+          initialStyles: selection.styles || {},
+          onStyleChange: (prop, value) => {
+             if (handlers.onStyleChange) handlers.onStyleChange(prop, value);
+          }
+        });
+
         properties.appendChild(elementActions);
         properties.appendChild(layoutSection);
         properties.appendChild(typoSection);
         properties.appendChild(visualsSection);
+        properties.appendChild(strokeSection);
       }
     },
     setInspecting(isInspecting) {
