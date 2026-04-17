@@ -100,9 +100,117 @@ function ensureInspector() {
 
   state.inspector = createInspectorManager({
     onSelectionChange: publishSelection,
+    onAltCopy: async (snapshot) => {
+      if (!snapshot) return;
+
+      const selectionLabel = panelSelectionLabel(snapshot);
+      const payload = {
+        tagName: snapshot.tagName,
+        className: snapshot.attributes?.className,
+        textContent: snapshot.textContent ?? selectionLabel,
+        path: snapshot.path,
+        dimensions: {
+          width: snapshot.width,
+          height: snapshot.height,
+        },
+        keyStyles: snapshot.keyStyles,
+        attributes: snapshot.attributes,
+        childrenSummary: snapshot.childrenSummary,
+        key: `${snapshot.tagName}-${snapshot.label}`,
+        label: snapshot.label,
+        copiedAt: Date.now(),
+      };
+
+      await copyPayloadToClipboard(payload);
+      showAltCopyToast('Copied');
+    },
   });
 
   return state.inspector;
+}
+
+function panelSelectionLabel(snapshot) {
+  return snapshot?.textContent || snapshot?.label || '';
+}
+
+async function copyPayloadToClipboard(payload) {
+  const text = JSON.stringify(payload);
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    // fallback
+  }
+
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.setAttribute('readonly', '');
+  ta.style.position = 'fixed';
+  ta.style.left = '-9999px';
+  document.body.appendChild(ta);
+  ta.select();
+  try {
+    document.execCommand('copy');
+    return true;
+  } finally {
+    document.body.removeChild(ta);
+  }
+}
+
+function showAltCopyToast(message) {
+  try {
+    const existing = document.getElementById('antigravity-alt-toast');
+    if (existing) existing.remove();
+
+    const el = document.createElement('div');
+    el.id = 'antigravity-alt-toast';
+    el.textContent = message;
+    el.style.cssText = [
+      'position:fixed',
+      'right:16px',
+      'bottom:16px',
+      'z-index:2147483647',
+      'padding:10px 12px',
+      'border-radius:12px',
+      'border:1px solid rgba(255,255,255,0.15)',
+      'background:rgba(0,0,0,0.65)',
+      'color:#fff',
+      'font:700 12px/1 system-ui, -apple-system, Segoe UI, Roboto, Arial',
+      'backdrop-filter: blur(10px)',
+      'box-shadow: 0 10px 30px rgba(0,0,0,0.35)',
+      'opacity:0',
+      'transform: translateY(4px)',
+      'transition: opacity 120ms ease, transform 120ms ease',
+    ].join(';');
+
+    document.body.appendChild(el);
+    requestAnimationFrame(() => {
+      el.style.opacity = '1';
+      el.style.transform = 'translateY(0)';
+    });
+
+    setTimeout(() => {
+      el.remove();
+    }, 900);
+  } catch {
+    // ignore
+  }
+}
+
+let altHeld = false;
+
+function setAltInspectMode(enabled) {
+  altHeld = Boolean(enabled);
+  const inspector = ensureInspector();
+  inspector.setAltCopyEnabled(Boolean(enabled));
+  inspector.setActive(Boolean(enabled));
+
+  if (!enabled) {
+    inspector.setAltCopyEnabled(false);
+    inspector.setActive(false);
+  }
 }
 
 function applyPanelState({ active, inspectMode, width = DEFAULT_PANEL_WIDTH }) {
@@ -155,3 +263,16 @@ function setInspectMode(enabled) {
     inspectMode: Boolean(enabled),
   });
 }
+
+// ALT+click quick copy mode (no sidepanel UI)
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Alt' && !e.repeat) {
+    setAltInspectMode(true);
+  }
+});
+
+window.addEventListener('keyup', (e) => {
+  if (e.key === 'Alt') {
+    setAltInspectMode(false);
+  }
+});

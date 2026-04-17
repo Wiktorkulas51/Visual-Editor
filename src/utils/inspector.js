@@ -395,7 +395,11 @@ function applyStyleSnapshot(element) {
   };
 }
 
-export function createInspectorManager({ onSelectionChange, onStateChange } = {}) {
+export function createInspectorManager({
+  onSelectionChange,
+  onStateChange,
+  onAltCopy,
+} = {}) {
   const layer = createOverlayLayer();
   const state = {
     active: false,
@@ -403,12 +407,12 @@ export function createInspectorManager({ onSelectionChange, onStateChange } = {}
     hoveredElement: null,
     selectedElement: null,
     editing: false,
+    altCopy: false,
   };
 
-  function syncSelection() {
+  function buildCurrentSelectionSnapshot() {
     if (!state.selectedElement) {
-      onSelectionChange?.(null);
-      return;
+      return null;
     }
 
     const el = state.selectedElement;
@@ -435,7 +439,7 @@ export function createInspectorManager({ onSelectionChange, onStateChange } = {}
     const path = buildPathSnapshot(el, { maxDepth: 4 });
     const childrenSummary = buildChildrenSummary(el);
 
-    onSelectionChange?.({
+    return {
       ...selectionBase,
       textContent: inner,
       attributes,
@@ -444,7 +448,12 @@ export function createInspectorManager({ onSelectionChange, onStateChange } = {}
       keyStyles,
       // keep styles if other parts rely on them
       ...styleSnapshot,
-    });
+    };
+  }
+
+  function syncSelection() {
+    const snapshot = buildCurrentSelectionSnapshot();
+    onSelectionChange?.(snapshot);
   }
 
   function clearSelection() {
@@ -499,6 +508,19 @@ export function createInspectorManager({ onSelectionChange, onStateChange } = {}
 
     if (isSecondClick) {
       startEditing(target);
+      return;
+    }
+
+    // ALT+click: copy immediately without “sidepanel” workflow.
+    if (state.altCopy) {
+      state.selectedElement = target;
+      layer.showSelection(getElementRect(target), buildElementLabel(target));
+
+      const snapshot = buildCurrentSelectionSnapshot();
+      onAltCopy?.(snapshot);
+
+      clearSelection();
+      state.altCopy = false;
       return;
     }
 
@@ -581,6 +603,13 @@ export function createInspectorManager({ onSelectionChange, onStateChange } = {}
         layer.hideHover();
       }
       onStateChange?.({ active: state.active, locked: state.locked });
+    },
+    setAltCopyEnabled(enabled) {
+      state.altCopy = Boolean(enabled);
+      // If user disables alt mode while we have a selection, drop it.
+      if (!state.altCopy) {
+        layer.hideSelection();
+      }
     },
     clearSelection,
     updateTag(newTagName) {
